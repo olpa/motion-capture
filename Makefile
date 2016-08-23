@@ -1,11 +1,19 @@
-CXXFLAGS=-std=c++11
+CXXFLAGS=-std=c++11 -ggdb
+
+OBJFILES=measurement.o
 
 all: replay
 
 replay: replay-hex-values
 
-replay-hex-values: replay-hex-values.cpp
+r: replay-hex-values
+	./$< got-from-device
+
+replay-hex-values: replay-hex-values.cpp ${OBJFILES}
 	g++ -o $@ ${CXXFLAGS} $+
 
-mpu: mpu.cpp measurement.o
+mpu: mpu.cpp ${OBJFILES}
 	g++ -o $@ ${CXXFLAGS} $+
+
+clean:
+	rm -f mpu replay-hex-values ${OBJFILES}
