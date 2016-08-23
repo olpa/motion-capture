@@ -3,6 +3,8 @@
 #include <arpa/inet.h>
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
+#include <cstdint>
+#include <algorithm>
 #include "measurement.hpp"
 
 /* Copy-paste from i2ctools */
@@ -36,9 +38,16 @@ __s32 i2c_smbus_read_byte_data(int file, __u8 command)
 }
 /* End of copy-paste */
 
-std::ostream& operator <<(std::ostream& os, BigEndian16 const& obj) {
+std::ostream& operator<<(std::ostream& os, BigEndian16 const& obj) {
   os << std::hex << ntohs(obj.val);
   return os;
+}
+
+std::istream& operator>>(std::istream& is, BigEndian16& obj) {
+  uint16_t val;
+  is >> std::hex >> val;
+  obj.val = htons(val);
+  return is;
 }
 
 void Measurement::measure(int fd) {
@@ -52,7 +61,13 @@ void Measurement::measure(int fd) {
   }
 }
 
-std::ostream& operator <<(std::ostream &os, Measurement const& obj) {
+std::ostream& operator<<(std::ostream& os, Measurement const& obj) {
   std::copy(obj.data.begin(), obj.data.end(), std::ostream_iterator<BigEndian16>(os, " "));
   return os;
+}
+
+std::istream& operator>>(std::istream& is, Measurement& obj) {
+  std::istream_iterator<BigEndian16> isi(is);
+  std::copy_n(isi, obj.n_words, obj.data.begin());
+  return is;
 }
