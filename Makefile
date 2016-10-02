@@ -1,4 +1,5 @@
 CXXFLAGS=-std=c++11 -ggdb
+LDUNITTESTFLAGS=-lgmock -lgtest
 
 OBJFILES=measurement.o
 
@@ -17,3 +18,9 @@ mpu: mpu.cpp ${OBJFILES}
 
 clean:
 	rm -f mpu replay-hex-values ${OBJFILES}
+
+test: test-calibrate
+	./$<
+
+test-calibrate: test-calibrate.cpp
+	g++ -o $@ ${CXXFLAGS} $< ${LDUNITTESTFLAGS}
