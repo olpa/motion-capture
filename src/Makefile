@@ -1,7 +1,7 @@
 CXXFLAGS=-std=c++11 -ggdb
 LDUNITTESTFLAGS=-lgmock -lgtest
 
-OBJFILES=measurement.o
+OBJFILES=if_iostream.o
 
 all: replay
 
