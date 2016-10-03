@@ -17,13 +17,12 @@ mpu: mpu.cpp ${OBJFILES}
 	g++ -o $@ ${CXXFLAGS} $+
 
 clean:
-	rm -f mpu replay-hex-values ${OBJFILES}
+	rm -f mpu replay-hex-values run-test-* ${OBJFILES}
 
 #test: test-calibrate
 #	./$<
 
-test: run-test-calibrate
-	./$<
+test: texec-calibrate texec-measurement
 
 texec-calibrate: run-test-calibrate
 	./$<
