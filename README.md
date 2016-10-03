@@ -7,8 +7,11 @@ The first milestone as the target:
 * The tool `rviz` (or maybe also `gazebo`) replays the motion.
 
 https://www.invensense.com/products/motion-tracking/6-axis/mpu-6050/
+<br />
 http://www.ros.org/
+<br />
 http://wiki.ros.org/rviz
+<br />
 http://gazebosim.org/
 
 ## The status as of September 2016
