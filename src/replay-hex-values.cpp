@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include "measurement.hpp"
+#include "if_iostream.hpp"
 
 int main(int argc, char** argv) {
   std::string fname;
@@ -10,11 +11,10 @@ int main(int argc, char** argv) {
     return 1;
   }
   fname = argv[1];
-  //std::cout << "File name: " << fname << std::endl;
+  std::cout << "File name: " << fname << std::endl;
   std::ifstream is(fname);
-  Measurement m;
   while (is) {
-    is >> m;
+    Measurement m = measure(is);
     if (is.fail()) {
       break;
     }
