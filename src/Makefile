@@ -19,8 +19,14 @@ mpu: mpu.cpp ${OBJFILES}
 clean:
 	rm -f mpu replay-hex-values ${OBJFILES}
 
-test: test-calibrate
+#test: test-calibrate
+#	./$<
+
+test: test-measurement
 	./$<
 
 test-calibrate: test-calibrate.cpp
+	g++ -o $@ ${CXXFLAGS} $< ${LDUNITTESTFLAGS}
+
+test-measurement: test-measurement.cpp
 	g++ -o $@ ${CXXFLAGS} $< ${LDUNITTESTFLAGS}
