@@ -22,11 +22,11 @@ clean:
 #test: test-calibrate
 #	./$<
 
-test: test-measurement
+test: run-test-measurement
 	./$<
 
-test-calibrate: test-calibrate.cpp
+run-test-calibrate: test-calibrate.cpp
 	g++ -o $@ ${CXXFLAGS} $< ${LDUNITTESTFLAGS}
 
-test-measurement: test-measurement.cpp
+run-test-measurement: test-measurement.cpp
 	g++ -o $@ ${CXXFLAGS} $< ${LDUNITTESTFLAGS}

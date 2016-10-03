@@ -4,4 +4,5 @@
 src/mpu
 src/got-from-device
 src/replay-hex-values
+src/run-test-*
 misc
