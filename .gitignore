@@ -1,6 +1,7 @@
 *~
 *.swp
 *.o
-mpu
-got-from-device
-replay-hex-values
+src/mpu
+src/got-from-device
+src/replay-hex-values
+misc
