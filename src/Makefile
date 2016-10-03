@@ -22,11 +22,17 @@ clean:
 #test: test-calibrate
 #	./$<
 
-test: run-test-measurement
+test: run-test-calibrate
+	./$<
+
+texec-calibrate: run-test-calibrate
 	./$<
 
 run-test-calibrate: test-calibrate.cpp
 	g++ -o $@ ${CXXFLAGS} $< ${LDUNITTESTFLAGS}
+
+texec-measurement: run-test-measurement
+	./$<
 
 run-test-measurement: test-measurement.cpp
 	g++ -o $@ ${CXXFLAGS} $< ${LDUNITTESTFLAGS}
