@@ -15,6 +15,7 @@ TEST(Measurement, InstantiatesEmpty) {
   ASSERT_THAT(m.ax, Eq(0));
   ASSERT_THAT(m.ay, Eq(0));
   ASSERT_THAT(m.az, Eq(0));
+  ASSERT_THAT(m.temperature, Eq(0));
 }
 
 TEST(Measurement, EqualCompare) {
