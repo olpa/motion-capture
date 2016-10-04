@@ -1,7 +1,7 @@
 CXXFLAGS=-std=c++11 -ggdb
 LDUNITTESTFLAGS=-lgmock -lgtest
 
-OBJFILES=if_iostream.o
+OBJFILES=if_iostream.o measurement.hpp
 
 all: replay
 
@@ -27,11 +27,17 @@ test: texec-calibrate texec-measurement
 texec-calibrate: run-test-calibrate
 	./$<
 
-run-test-calibrate: test-calibrate.cpp
-	g++ -o $@ ${CXXFLAGS} $< ${LDUNITTESTFLAGS}
+run-test-calibrate: test-calibrate.cpp ${OBJFILES}
+	g++ -o $@ ${CXXFLAGS} $< ${OBJFILES} ${LDUNITTESTFLAGS}
 
 texec-measurement: run-test-measurement
 	./$<
 
-run-test-measurement: test-measurement.cpp
-	g++ -o $@ ${CXXFLAGS} $< ${LDUNITTESTFLAGS}
+run-test-measurement: test-measurement.cpp ${OBJFILES}
+	g++ -o $@ ${CXXFLAGS} $< ${OBJFILES} ${LDUNITTESTFLAGS}
+
+texec-iostream: run-test-iostream
+	./$<
+
+run-test-iostream: test-if_iostream.cpp ${OBJFILES}
+	g++ -o $@ ${CXXFLAGS} $< ${OBJFILES} ${LDUNITTESTFLAGS}
