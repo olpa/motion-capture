@@ -38,17 +38,6 @@ int main(int args, char** argv) {
     std::cerr << "ioctl failed: " << ::strerror(errno) << std::endl;
     return 1;
   }
-  /*
-  for (int i = 0; i < 10; i++) {
-    char32_t w = i2c_smbus_read_word_data(hdev, reg);
-    if (w < 0) {
-      std::cerr << "i2c transaction failed" << std::endl;
-    } else {
-      std::cout << "Got: " << static_cast<long>(w) << std::endl;
-    }
-    ::sleep(1);
-  }
-  */
   Measurement m;
   for (int i = 0; i < 10; i++) {
     m.measure(hdev);
