@@ -9,6 +9,9 @@ TEST(Measurement, Instantiates) {
 
 TEST(Measurement, InstantiatesEmpty) {
   Measurement m;
+
+  void;
+
   ASSERT_THAT(m.x, Eq(0));
   ASSERT_THAT(m.y, Eq(0));
   ASSERT_THAT(m.z, Eq(0));
@@ -22,6 +25,9 @@ TEST(Measurement, EqualCompare) {
   Measurement m1, m2;
   m1.x = 7;
   m2.x = 7;
+
+  void;
+
   ASSERT_THAT(m1, Eq(m2));
 }
 

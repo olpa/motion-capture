@@ -6,7 +6,9 @@ using namespace testing;
 
 TEST(Iostream, ReadMeasurement) {
   std::stringstream ss("204c 64 e4 f350 4b9 ff70 feb1 ");
+
   Measurement m = measure(ss);
+
   ASSERT_THAT(m.x, Eq(0x204c));
   ASSERT_THAT(m.y, Eq(0x64));
   ASSERT_THAT(m.z, Eq(0xe4));
@@ -26,7 +28,9 @@ TEST(Iostream, WriteMeasurement) {
   m.az = 32;
   m.temperature = 64;
   std::stringstream ss;
+
   ss << m;
+
   ASSERT_THAT(ss.str(), Eq("1 2 4 8 10 20 40"));
 }
 

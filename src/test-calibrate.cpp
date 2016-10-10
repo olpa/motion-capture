@@ -17,7 +17,9 @@ TEST(Calibrate, Instaltiates) {
 
 TEST(Calibrate, DefaultReturnsZeroValues) {
   Calibrate c;
+
   Measurement mes = c.get_zero_point();
+
   ASSERT_THAT(mes, Eq(Measurement()));
 }
 
