@@ -12,6 +12,7 @@ using namespace testing;
 
 TEST(Calibrate, Instaltiates) {
   Calibrate c;
+  (void)c;
 }
 
 TEST(Calibrate, DefaultReturnsZeroValues) {
