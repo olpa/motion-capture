@@ -1,8 +1,8 @@
 CXXFLAGS=-std=c++11 -ggdb -Wall
 LDUNITTESTFLAGS=-lgmock -lgtest
 
-OBJFILES=*.o
-HPPFILES=*.hpp
+OBJFILES=if_iostream.o if_mpu6050.o
+HPPFILES=if_iostream.hpp if_mpu6050.hpp measurement.hpp
 
 all: replay
 
