@@ -1,4 +1,5 @@
 #include <iterator>
+#include <memory>
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
 #include <linux/i2c.h>
@@ -7,36 +8,50 @@
 #include <algorithm>
 #include "measurement.hpp"
 
-/* Copy-paste from i2ctools */
-__s32 i2c_smbus_access(int file, char read_write, __u8 command,
-    int size, union i2c_smbus_data *data)
-{
-  struct i2c_smbus_ioctl_data args;
-  __s32 err;
+class i2c_Device_File {
+  i2c_Device_File(std::string const& file_name, int mpu_address)
+    : handle(::open(file_name, O_RDWR))
+  {
+    if (-1 == handle) {
+      throw std::system_error(::strerror(errno));
+    }
+    if (::ioctl (hdev, I2C_SLAVE, mpuaddr) < 0) {
+      throw std::system_error(::strerror(errno));
+    }
+  }
 
-  args.read_write = read_write;
-  args.command = command;
-  args.size = size;
-  args.data = data;
+  ~i2c_Device_File() {
+    if (-1 != handle) {
+      ::close(handle);
+      handle = -1;
+    }
+  }
 
-  err = ioctl(file, I2C_SMBUS, &args);
-  if (err == -1)
-    err = -errno;
-  return err;
+  i2c_Device_File(i2c_Device_File &arg) = delete;
+
+  i2c_Device_File(i2c_Device_File &arg) {
+    handle = arg.handle;
+    arg.handle = -1;
+  }
+
+  i2c_Device_File& operator=(i2c_Device_File &rhs) = delete;
+
+  i2c_Device_File& operator=(i2c_Device_File &&rhs) {
+    if (-1 != handle) {
+      ::close(handle);
+    }
+    handle = rhs.handle;
+    rhs.handle = -1;
+    return *this;
+  }
+
+  int get_handle() {
+    return handle;
+  }
+private:
+  int handle;
 }
-__s32 i2c_smbus_read_byte_data(int file, __u8 command)
-{
-  union i2c_smbus_data data;
-  int err;
 
-  err = i2c_smbus_access(file, I2C_SMBUS_READ, command,
-      I2C_SMBUS_BYTE_DATA, &data);
-  if (err < 0)
-    return err;
-
-  return 0x0FF & data.byte;
-}
-/* End of copy-paste */
 
 std::ostream& operator<<(std::ostream& os, BigEndian16 const& obj) {
   os << std::hex << ntohs(obj.val);
