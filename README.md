@@ -14,13 +14,17 @@ http://wiki.ros.org/rviz
 <br />
 http://gazebosim.org/
 
-## The status as of September 2016
+## The status as of October 2016
 
 The tool `mpu` reads the values from the sensor and dumps the values to the standard output.
 
 The tool `replay-hex-values` reads the values stored in the file. To be used for development when the sensor is detached.
 
 Now I'm understanding that the values from the sensor mean.
+
+On my system, the sensor starts in the sleep mode and should be activated by the command
+
+    $ i2cset -y 1 0x68 0x6b 0
 
 ## Files
 
