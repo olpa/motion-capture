@@ -6,50 +6,41 @@
 #include "if_mpu6050.hpp"
 #include "i2c_lib.hpp"
 
-class i2c_Device_File {
-public:
-  i2c_Device_File(std::string const& file_name, int mpu_address)
-    : handle(::open(file_name.c_str(), O_RDWR))
-  {
-    if (-1 == handle) {
-      throw std::system_error(errno, std::system_category());
-    }
-    if (i2c_set_slave_address(handle, mpu_address) < 0) {
-      throw std::system_error(errno, std::system_category());
-    }
+i2c_Device_File::i2c_Device_File(std::string const& file_name, int mpu_address)
+: handle(::open(file_name.c_str(), O_RDWR))
+{
+  if (-1 == handle) {
+    throw std::system_error(errno, std::system_category());
   }
-
-  ~i2c_Device_File() {
-    if (-1 != handle) {
-      ::close(handle);
-      handle = -1;
-    }
+  if (i2c_set_slave_address(handle, mpu_address) < 0) {
+    throw std::system_error(errno, std::system_category());
   }
+}
 
-  i2c_Device_File(i2c_Device_File& arg) = delete;
-
-  i2c_Device_File(i2c_Device_File&& arg) {
-    handle = arg.handle;
-    arg.handle = -1;
+i2c_Device_File::~i2c_Device_File() {
+  if (-1 != handle) {
+    ::close(handle);
+    handle = -1;
   }
+}
 
-  i2c_Device_File& operator=(i2c_Device_File& rhs) = delete;
+i2c_Device_File::i2c_Device_File(i2c_Device_File&& arg) {
+  handle = arg.handle;
+  arg.handle = -1;
+}
 
-  i2c_Device_File& operator=(i2c_Device_File&& rhs) {
-    if (-1 != handle) {
-      ::close(handle);
-    }
-    handle = rhs.handle;
-    rhs.handle = -1;
-    return *this;
+i2c_Device_File& i2c_Device_File::operator=(i2c_Device_File&& rhs) {
+  if (-1 != handle) {
+    ::close(handle);
   }
+  handle = rhs.handle;
+  rhs.handle = -1;
+  return *this;
+}
 
-  int const get_handle() const {
-    return handle;
-  }
-private:
-  int handle;
-};
+int i2c_Device_File::get_handle() const {
+  return handle;
+}
 
 /*
 uint16_t read_uint16(i2c_Device_File const& device, int regno) {
@@ -69,7 +60,7 @@ uint16_t read_uint16(i2c_Device_File const& device, int regno) {
 }
 */
 
-Measurement measure(i2c_Device_File const& device) {
+Measurement measure(i2c_Device_File& device) {
   Measurement m;
   int h = device.get_handle();
   m.x = i2c_smbus_read_word_data(h, 0x3b);
