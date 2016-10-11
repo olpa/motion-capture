@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <cstdint>
+#include <arpa/inet.h>
 #include "if_mpu6050.hpp"
 #include "i2c_lib.hpp"
 
@@ -42,33 +43,15 @@ int i2c_Device_File::get_handle() const {
   return handle;
 }
 
-/*
-uint16_t read_uint16(i2c_Device_File const& device, int regno) {
-  uint16_t network_order_word;
-  uint8_t* p = reinterpret_cast<uint8_t*>(&network_order_word);
-  int b = i2c_smbus_read_byte_data(device.get_handle(), regno++);
-  if (b < 0) {
-    throw std::system_error(errno, std::system_category());
-  }
-  *p++ = b;
-  b = i2c_smbus_read_byte_data(device.get_handle(), regno);
-  if (b < 0) {
-    throw std::system_error(errno, std::system_category());
-  }
-  *p = b;
-  return ntons(network_order_word);
-}
-*/
-
 Measurement measure(i2c_Device_File& device) {
   Measurement m;
   int h = device.get_handle();
-  m.x = i2c_smbus_read_word_data(h, 0x3b);
-  m.y = i2c_smbus_read_word_data(h, 0x3d);
-  m.z = i2c_smbus_read_word_data(h, 0x3f);
-  m.ax = i2c_smbus_read_word_data(h, 0x41);
-  m.ay = i2c_smbus_read_word_data(h, 0x43);
-  m.az = i2c_smbus_read_word_data(h, 0x45);
-  m.temperature = i2c_smbus_read_word_data(h, 0x47);
+  m.x = ntohs(i2c_smbus_read_word_data(h, 0x3b));
+  m.y = ntohs(i2c_smbus_read_word_data(h, 0x3d));
+  m.z = ntohs(i2c_smbus_read_word_data(h, 0x3f));
+  m.ax = ntohs(i2c_smbus_read_word_data(h, 0x41));
+  m.ay = ntohs(i2c_smbus_read_word_data(h, 0x43));
+  m.az = ntohs(i2c_smbus_read_word_data(h, 0x45));
+  m.temperature = ntohs(i2c_smbus_read_word_data(h, 0x47));
   return m;
 }
