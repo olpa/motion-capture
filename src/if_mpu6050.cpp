@@ -1,22 +1,21 @@
-#include <iterator>
-#include <memory>
-#include <sys/ioctl.h>
-#include <arpa/inet.h>
-#include <linux/i2c.h>
-#include <linux/i2c-dev.h>
+#include <string>
+#include <system_error>
+#include <fcntl.h>
+#include <unistd.h>
 #include <cstdint>
-#include <algorithm>
-#include "measurement.hpp"
+#include "if_mpu6050.hpp"
+#include "i2c_lib.hpp"
 
 class i2c_Device_File {
+public:
   i2c_Device_File(std::string const& file_name, int mpu_address)
-    : handle(::open(file_name, O_RDWR))
+    : handle(::open(file_name.c_str(), O_RDWR))
   {
     if (-1 == handle) {
-      throw std::system_error(::strerror(errno));
+      throw std::system_error(errno, std::system_category());
     }
-    if (::ioctl (hdev, I2C_SLAVE, mpuaddr) < 0) {
-      throw std::system_error(::strerror(errno));
+    if (i2c_set_slave_address(handle, mpu_address) < 0) {
+      throw std::system_error(errno, std::system_category());
     }
   }
 
@@ -27,16 +26,16 @@ class i2c_Device_File {
     }
   }
 
-  i2c_Device_File(i2c_Device_File &arg) = delete;
+  i2c_Device_File(i2c_Device_File& arg) = delete;
 
-  i2c_Device_File(i2c_Device_File &arg) {
+  i2c_Device_File(i2c_Device_File&& arg) {
     handle = arg.handle;
     arg.handle = -1;
   }
 
-  i2c_Device_File& operator=(i2c_Device_File &rhs) = delete;
+  i2c_Device_File& operator=(i2c_Device_File& rhs) = delete;
 
-  i2c_Device_File& operator=(i2c_Device_File &&rhs) {
+  i2c_Device_File& operator=(i2c_Device_File&& rhs) {
     if (-1 != handle) {
       ::close(handle);
     }
@@ -45,44 +44,40 @@ class i2c_Device_File {
     return *this;
   }
 
-  int get_handle() {
+  int const get_handle() const {
     return handle;
   }
 private:
   int handle;
-}
+};
 
-
-std::ostream& operator<<(std::ostream& os, BigEndian16 const& obj) {
-  os << std::hex << ntohs(obj.val);
-  return os;
-}
-
-std::istream& operator>>(std::istream& is, BigEndian16& obj) {
-  uint16_t val;
-  is >> std::hex >> val;
-  obj.val = htons(val);
-  return is;
-}
-
-void Measurement::measure(int fd) {
-  int regno = first_reg;
-  for (int8_t &b: bytes) {
-    int c = i2c_smbus_read_byte_data(fd, regno++);
-    if (c < 0) {
-      throw std::system_error(std::error_code(c, std::system_category()), "i2c_smbus_access");
-    }
-    b = static_cast<int8_t>(c);
+/*
+uint16_t read_uint16(i2c_Device_File const& device, int regno) {
+  uint16_t network_order_word;
+  uint8_t* p = reinterpret_cast<uint8_t*>(&network_order_word);
+  int b = i2c_smbus_read_byte_data(device.get_handle(), regno++);
+  if (b < 0) {
+    throw std::system_error(errno, std::system_category());
   }
+  *p++ = b;
+  b = i2c_smbus_read_byte_data(device.get_handle(), regno);
+  if (b < 0) {
+    throw std::system_error(errno, std::system_category());
+  }
+  *p = b;
+  return ntons(network_order_word);
 }
+*/
 
-std::ostream& operator<<(std::ostream& os, Measurement const& obj) {
-  std::copy(obj.data.begin(), obj.data.end(), std::ostream_iterator<BigEndian16>(os, " "));
-  return os;
-}
-
-std::istream& operator>>(std::istream& is, Measurement& obj) {
-  std::istream_iterator<BigEndian16> isi(is);
-  std::copy_n(isi, obj.n_words, obj.data.begin());
-  return is;
+Measurement measure(i2c_Device_File const& device) {
+  Measurement m;
+  int h = device.get_handle();
+  m.x = i2c_smbus_read_word_data(h, 0x3b);
+  m.y = i2c_smbus_read_word_data(h, 0x3d);
+  m.z = i2c_smbus_read_word_data(h, 0x3f);
+  m.ax = i2c_smbus_read_word_data(h, 0x41);
+  m.ay = i2c_smbus_read_word_data(h, 0x43);
+  m.az = i2c_smbus_read_word_data(h, 0x45);
+  m.temperature = i2c_smbus_read_word_data(h, 0x47);
+  return m;
 }
