@@ -1,4 +1,5 @@
 #include <sys/ioctl.h>
+#include <errno.h>
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
 
