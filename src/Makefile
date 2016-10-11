@@ -1,47 +1,37 @@
 CXXFLAGS=-std=c++11 -ggdb -Wall
 LDUNITTESTFLAGS=-lgmock -lgtest
 
-OBJFILES=if_iostream.o if_mpu6050.o
-HPPFILES=if_iostream.hpp if_mpu6050.hpp measurement.hpp
+HPPFILES=if_iostream.hpp measurement.hpp
+MPUHPPFILES=if_mpu6050.hpp i2c_lib.hpp
+OBJFILES=${patsubst %.hpp,%.o,${HPPFILES}}
+MPUOBJFILES=${patsubst %.hpp,%.o,${MPUHPPFILES}}
 
-all: replay
+# Tools
 
-replay: replay-hex-values
+all: replay-hex-values mpu
 
-r: replay-hex-values
-	./$< got-from-device
+replay-hex-values: main-replay-hex-values.cpp ${OBJFILES} ${HPPFILES}
+	g++ -o $@ $< ${CXXFLAGS} ${OBJFILES}
 
-replay-hex-values: replay-hex-values.cpp ${OBJFILES} ${HPPFILES}
-	g++ -o $@ ${CXXFLAGS} $+
+mpu: main-mpu.cpp ${OBJFILES} ${HPPFILES} ${MPUOBJFILES} ${MPUHPPFILES}
+	g++ -o $@ $< ${CXXFLAGS} ${OBJFILES} ${MPUOBJFILES}
 
-mpu: mpu.cpp ${OBJFILES} ${HPPFILES}
-	g++ -o $@ ${CXXFLAGS} $+
+# Library
 
-if_mpu6050.o: if_mpu6050.cpp ${OBJFILES} ${HPPFILES}
-	g++ -o $@ ${CXXFLAGS} $+
+%.o: %.cpp ${HPPFILES}
+	g++ -o $@ -c ${CXXFLAGS} $<
+
+# Misc
 
 clean:
-	rm -f mpu replay-hex-values run-test-* ${OBJFILES} *~
+	rm -f mpu replay-hex-values run-test-* *.o *~
 
-#test: test-calibrate
-#	./$<
+# Testing
 
-test: texec-calibrate texec-measurement texec-iostream
+test: texec-calibrate texec-measurement texec-if_iostream
 
-texec-calibrate: run-test-calibrate
+texec-%: run-test-%
 	./$<
 
-run-test-calibrate: test-calibrate.cpp ${OBJFILES} ${HPPFILES}
-	g++ -o $@ ${CXXFLAGS} $< ${OBJFILES} ${LDUNITTESTFLAGS}
-
-texec-measurement: run-test-measurement
-	./$<
-
-run-test-measurement: test-measurement.cpp ${OBJFILES} ${HPPFILES}
-	g++ -o $@ ${CXXFLAGS} $< ${OBJFILES} ${LDUNITTESTFLAGS}
-
-texec-iostream: run-test-iostream
-	./$<
-
-run-test-iostream: test-if_iostream.cpp ${OBJFILES} ${HPPFILES}
+run-%: %.cpp ${OBJFILES} ${HPPFILES}
 	g++ -o $@ ${CXXFLAGS} $< ${OBJFILES} ${LDUNITTESTFLAGS}
