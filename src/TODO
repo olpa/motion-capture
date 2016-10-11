@@ -1,3 +1,7 @@
+Better reporting. This is not enough:
+Error: No such file or directory
+Add file name.
+
 Conformant to i2c tools command line arguments.
 
 Burst mode for i2c.
