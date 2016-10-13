@@ -7,8 +7,9 @@ struct Measurement {
 public:
   Measurement();
   bool operator==(Measurement const& rhs) const;
+  void cast_to_signed();
 
-  int x, y, z, ax, ay, az, temperature;
+  int16_t x, y, z, ax, ay, az, temperature;
 };
 
 #endif

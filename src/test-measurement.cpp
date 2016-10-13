@@ -31,6 +31,15 @@ TEST(Measurement, EqualCompare) {
   ASSERT_THAT(m1, Eq(m2));
 }
 
+TEST(Measurement, UnsignedBecomesSigned) {
+  Measurement m;
+  m.x = 0xffff;
+
+  void();
+
+  ASSERT_THAT(m.x, Eq(-1));
+}
+
 int main(int argc, char**argv) {
   InitGoogleMock(&argc, argv);
   return RUN_ALL_TESTS();
