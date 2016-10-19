@@ -10,11 +10,13 @@ class QuatWithEffect:
 
   def next(self):
     def new_val(old_val, delta):
-      val = old_val + delta
-      if val > 1:
-        val = -val
-      return val
-    self.pos = [new_val(*v) for v in zip(self.pos, self.v)]
+      new_val = old_val + delta
+      if (new_val < -1) or (new_val > 1):
+        return (old_val, -delta)
+      else:
+        return (new_val, delta)
+    vals = [new_val(*x) for x in zip(self.pos, self.v)]
+    (self.pos, self.v) = zip(*vals)
     return self.pos
 
 if '__main__' == __name__:
