@@ -23,12 +23,14 @@ The two things are important.
 
 `Rviz` finds the rotation frame `imu_sensor1` somehow self.
 
-## rbag
+## Recording and replaying the motion
 
-http://wiki.ros.org/ROS/Tutorials/Recording%20and%20playing%20back%20data
+`ROS` provides the tool [rosbag](http://wiki.ros.org/ROS/Tutorials/Recording%20and%20playing%20back%20data).
+
+I've made a sample recording in the file `sample_tf_events.bag`.
+
+If you want to play the same motion twice, reset `rviz` (there is a button). The `TF`-events have a timestamp. Without reset, `rviz` ignores the events "from the past".
 
 ## TODO
 
-decode the structure
-
-write the bag-file direct
+I plan to decode the structure of `bag`-files in order to generate them self without `ROS` libraries installed.
