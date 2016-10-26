@@ -28,6 +28,10 @@ On my system, the sensor starts in the sleep mode and should be activated by the
 
 ## Files
 
-`doc/`: MPU-6050 and I2C specifications
+`doc/`: `MPU-6050` and `I2C` specifications
+
+`ros/`: experiments with `ROS`, `Python`
 
 `sample_measurements/`: the values for basic movements
+
+`src/`: the source code, `C++`
