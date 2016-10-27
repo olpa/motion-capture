@@ -22,8 +22,13 @@ class XmlWriter:
     return InTag()
 
   def keyval(self, key, val):
+    attr = ""
+    if 4 == len(val):
+      attr = " int=\"%i\"" % struct.unpack_from("<I", val)[0]
+    elif 8 == len(val):
+      attr = " long=\"%i\"" % struct.unpack_from("<I", val)[0]
     val = self.xml_escape(val)
-    self.h.write("%s<%s>%s</%s>\n" % ("  " * self.level, key, val, key))
+    self.h.write("%s<%s%s>%s</%s>\n" % ("  " * self.level, key, attr, val, key))
 
   def xml_escape(self, s):
     a = []
