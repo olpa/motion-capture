@@ -6,6 +6,18 @@ if ("-h" in sys.argv) or ("--help" in sys.argv):
 
 import struct
 
+class XmlWriter:
+  def __init__(self, h):
+    self.h = h
+
+  def in_tag(self, tname):
+    class InTag:
+      def __enter__(selfself):
+        self.h.write("<%s>\n" % tname)
+      def __exit__(selfself, type, value, traceback):
+        self.h.write("</%s>\n" % tname)
+    return InTag()
+
 def read_initial_line(h):
   s = h.readline()
   s = s.strip()
@@ -24,4 +36,6 @@ def loop_over_records(h):
     print header_len, data_len
 
 read_initial_line(sys.stdin)
-loop_over_records(sys.stdin)
+wr = XmlWriter(sys.stdout)
+with wr.in_tag("rosbag"):
+  loop_over_records(sys.stdin)
