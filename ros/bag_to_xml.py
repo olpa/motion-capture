@@ -22,7 +22,29 @@ class XmlWriter:
     return InTag()
 
   def keyval(self, key, val):
+    val = self.xml_escape(val)
     self.h.write("%s<%s>%s</%s>\n" % ("  " * self.level, key, val, key))
+
+  def xml_escape(self, s):
+    a = []
+    for ch in s:
+      if '<' == ch:
+        a.extend("&lt;")
+      elif '>' == ch:
+        a.extend("&gt;")
+      elif '&' == ch:
+        a.extend("&amp;")
+      else:
+        code = ord(ch)
+        if code < 0x20:
+          code = 0xe000
+        if code < 0x7f:
+          a.append(ch)
+        elif code < 0x100:
+          a.extend("&#x%02x;" % code)
+        else:
+          a.extend("&#x%04x;" % code)
+    return "".join(a)
 
 def read_initial_line(h):
   s = h.readline()
