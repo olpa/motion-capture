@@ -65,30 +65,35 @@ def loop_over_records(h, wr):
       header_len = struct.unpack_from("<I", s_header_len)[0]
       with wr.in_tag("header"):
         opcode = loop_over_header(h, wr, header_len)
+      s_data_len = h.read(4)
+      data_len = struct.unpack_from("<I", s_data_len)[0]
       if 100 == opcode:
-        handle_record_bag_header(h, wr)
+        handle_record_bag_header(h, wr, data_len)
+      elif 7 == opcode:
+        handle_record_connection(h, wr, data_len)
       else:
-        handle_data_skip(h, wr)
+        handle_data_skip(h, wr, data_len)
 
-def handle_data_skip(h, wr):
-  s_data_len = h.read(4)
-  data_len = struct.unpack_from("<I", s_data_len)[0]
+def handle_record_connection(h, wr, data_len):
+  loop_over_header(h, wr, data_len, opcode_expected = False)
+
+def handle_data_skip(h, wr, data_len):
   s_data = h.read(data_len)
   wr.keyval("rawdata", s_data)
 
-def loop_over_header(h, wr, bytes_left):
+def loop_over_header(h, wr, bytes_left, opcode_expected = True):
   opcode = None
   while bytes_left > 0:
     s_field_len = h.read(4)
     field_len = struct.unpack_from("<I", s_field_len)[0]
     s_field = h.read(field_len)
-    (field_name, field_value) = s_field.split("=", 2)
+    (field_name, field_value) = s_field.split("=", 1)
     bytes_left = bytes_left - field_len - 4
     wr.keyval(field_name, field_value)
     if "op" == field_name:
       opcode = ord(field_value)
   assert not bytes_left
-  assert opcode is not None
+  assert (opcode is not None) or (not opcode_expected)
   return opcode
 
 read_initial_line(sys.stdin)
