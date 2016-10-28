@@ -24,9 +24,9 @@ class XmlWriter:
   def keyval(self, key, val):
     attr = ""
     if 4 == len(val):
-      attr = " int=\"%i\"" % struct.unpack_from("<I", val)[0]
+      attr = " int=\"%i\"" % coded_string_to_int(val)
     elif 8 == len(val):
-      attr = " long=\"%i\"" % struct.unpack_from("<I", val)[0]
+      attr = " long=\"%i\"" % coded_string_to_long(val)
     val = self.xml_escape(val)
     self.h.write("%s<%s%s>%s</%s>\n" % ("  " * self.level, key, attr, val, key))
 
@@ -51,6 +51,15 @@ class XmlWriter:
           a.extend("&#x%04x;" % code)
     return "".join(a)
 
+def coded_string_to_byte(s):
+  return ord(s)
+
+def coded_string_to_int(s):
+  return struct.unpack_from("<I", s)[0]
+
+def coded_string_to_long(s):
+  return struct.unpack_from("<I", s)[0]
+
 def read_initial_line(h):
   s = h.readline()
   s = s.strip()
@@ -64,25 +73,36 @@ def loop_over_records(h, wr):
     with wr.in_tag("record"):
       header_len = struct.unpack_from("<I", s_header_len)[0]
       with wr.in_tag("header"):
-        opcode = loop_over_header(h, wr, header_len)
+        rec = loop_over_header(h, wr, header_len)
+      opcode = rec["op"]
+      opcode = coded_string_to_byte(opcode)
       s_data_len = h.read(4)
       data_len = struct.unpack_from("<I", s_data_len)[0]
       if 100 == opcode:
         handle_record_bag_header(h, wr, data_len)
       elif 7 == opcode:
         handle_record_connection(h, wr, data_len)
+      elif 6 == opcode:
+        handle_record_chunk_info(h, wr, rec)
       else:
         handle_data_skip(h, wr, data_len)
 
 def handle_record_connection(h, wr, data_len):
-  loop_over_header(h, wr, data_len, opcode_expected = False)
+  loop_over_header(h, wr, data_len)
+
+def handle_record_chunk_info(h, rw, rec):
+  for i in range(coded_string_to_int(rec["count"])):
+    with wr.in_tag("chunk"):
+      s = h.read(8)
+      wr.keyval("conn", s[:4])
+      wr.keyval("count", s[4:])
 
 def handle_data_skip(h, wr, data_len):
   s_data = h.read(data_len)
   wr.keyval("rawdata", s_data)
 
-def loop_over_header(h, wr, bytes_left, opcode_expected = True):
-  opcode = None
+def loop_over_header(h, wr, bytes_left):
+  rec = {}
   while bytes_left > 0:
     s_field_len = h.read(4)
     field_len = struct.unpack_from("<I", s_field_len)[0]
@@ -90,11 +110,9 @@ def loop_over_header(h, wr, bytes_left, opcode_expected = True):
     (field_name, field_value) = s_field.split("=", 1)
     bytes_left = bytes_left - field_len - 4
     wr.keyval(field_name, field_value)
-    if "op" == field_name:
-      opcode = ord(field_value)
+    rec[field_name] = field_value
   assert not bytes_left
-  assert (opcode is not None) or (not opcode_expected)
-  return opcode
+  return rec
 
 read_initial_line(sys.stdin)
 wr = XmlWriter(sys.stdout)
