@@ -42,7 +42,7 @@ class XmlWriter:
       else:
         code = ord(ch)
         if code < 0x20:
-          code = 0xe000
+          code = 0xe000 + code
         if code < 0x7f:
           a.append(ch)
         elif code < 0x100:
@@ -64,12 +64,20 @@ def loop_over_records(h, wr):
     with wr.in_tag("record"):
       header_len = struct.unpack_from("<I", s_header_len)[0]
       with wr.in_tag("header"):
-        loop_over_header(h, wr, header_len)
-      s_data_len = h.read(4)
-      data_len = struct.unpack_from("<I", s_data_len)[0]
-      s_data = h.read(data_len)
+        opcode = loop_over_header(h, wr, header_len)
+      if 100 == opcode:
+        handle_record_bag_header(h, wr)
+      else:
+        handle_data_skip(h, wr)
+
+def handle_data_skip(h, wr):
+  s_data_len = h.read(4)
+  data_len = struct.unpack_from("<I", s_data_len)[0]
+  s_data = h.read(data_len)
+  wr.keyval("rawdata", s_data)
 
 def loop_over_header(h, wr, bytes_left):
+  opcode = None
   while bytes_left > 0:
     s_field_len = h.read(4)
     field_len = struct.unpack_from("<I", s_field_len)[0]
@@ -77,7 +85,11 @@ def loop_over_header(h, wr, bytes_left):
     (field_name, field_value) = s_field.split("=", 2)
     bytes_left = bytes_left - field_len - 4
     wr.keyval(field_name, field_value)
+    if "op" == field_name:
+      opcode = ord(field_value)
   assert not bytes_left
+  assert opcode is not None
+  return opcode
 
 read_initial_line(sys.stdin)
 wr = XmlWriter(sys.stdout)
