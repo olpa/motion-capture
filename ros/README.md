@@ -31,6 +31,15 @@ I've made a sample recording in the file `sample_tf_events.bag`.
 
 If you want to play the same motion twice, reset `rviz` (there is a button). The `TF`-events have a timestamp. Without reset, `rviz` ignores the events "from the past".
 
-## TODO
+## Decoding the structure of the bag-files
 
-I plan to decode the structure of `bag`-files in order to generate them self without `ROS` libraries installed.
+I plan to generate `bag`-files self without `ROS` libraries installed.
+
+There is [documentation](http://wiki.ros.org/Bags/Format/2.0) for the `bag` format, but it is not enough. To fully understand the structure, I've written bag-to-xml converter `bag_to_xml.py`, which works for my samples. Usage:
+
+    $ cat file.bag | python bag_to_xml.py >file.xml
+
+The raw data for a message mostly corresponds to the message structure. The two things I don't understand are:
+
+* The field `seq` in `Header` is always 0.
+* There is always the value 1 of the type `uint32` before the `Header`.
