@@ -5,4 +5,4 @@ all: a.out
 	./$<
 
 a.out: test-rosbag_writer.cpp
-	g++ $< ${LDUNITTESTFLAGS}
+	g++ ${CXXFLAGS} $< ${LDUNITTESTFLAGS}
