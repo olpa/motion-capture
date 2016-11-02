@@ -78,17 +78,22 @@ def loop_over_records(h, wr):
       opcode = coded_string_to_byte(opcode)
       s_data_len = h.read(4)
       data_len = struct.unpack_from("<I", s_data_len)[0]
-      if 100 == opcode:
-        handle_record_bag_header(h, wr, data_len)
+      if 4 == opcode:
+        handle_record_index(h, wr, rec, data_len)
       elif 7 == opcode:
         handle_record_connection(h, wr, data_len)
       elif 6 == opcode:
         handle_record_chunk_info(h, wr, rec)
+      elif 5 == opcode:
+        handle_record_chunk(h, wr, data_len)
       else:
         handle_data_skip(h, wr, data_len)
 
 def handle_record_connection(h, wr, data_len):
   loop_over_header(h, wr, data_len)
+
+def handle_record_chunk(h, wr, data_len):
+  loop_over_records(h, wr)
 
 def handle_record_chunk_info(h, rw, rec):
   for i in range(coded_string_to_int(rec["count"])):
@@ -96,6 +101,15 @@ def handle_record_chunk_info(h, rw, rec):
       s = h.read(8)
       wr.keyval("conn", s[:4])
       wr.keyval("count", s[4:])
+
+def handle_record_index(h, rw, rec, data_len):
+  for i in range(coded_string_to_int(rec["count"])):
+    with wr.in_tag("index"):
+      s = h.read(12)
+      data_len = data_len - 12
+      wr.keyval("time", s[:8])
+      wr.keyval("offset", s[8:])
+  assert not data_len
 
 def handle_data_skip(h, wr, data_len):
   s_data = h.read(data_len)
