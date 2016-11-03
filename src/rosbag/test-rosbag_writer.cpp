@@ -16,25 +16,20 @@ struct Header {
 // There are htonl() etc for big-endian (network),
 // but no equivalent for little-endian.
 //
-struct IoUInt32 {
-  IoUInt32(uint32_t value) : value_(value) {}
-  uint32_t value_;
-};
 
-std::ostream& operator<<(std::ostream& os, IoUInt32 const& v) {
-  os.write(reinterpret_cast<char const*>(&v.value_), 4);
-  return os;
+void write_value(std::ostream& os, uint32_t const v) {
+  os.write(reinterpret_cast<char const*>(&v), 4);
 }
 
-struct IoUInt64 {
-  IoUInt64(uint64_t value) : value_(value) {}
-  uint64_t value_;
-};
-
-std::ostream& operator<<(std::ostream& os, IoUInt64 const& v) {
-  os.write(reinterpret_cast<char const*>(&v.value_), 8);
-  return os;
+void write_value(std::ostream& os, uint64_t const v) {
+  os.write(reinterpret_cast<char const*>(&v), 8);
 }
+
+void write_key_value(std::ostream& os, std::string const& key, std::string const&value) {
+  write_value(os, static_cast<uint32_t>(0));
+  os << key << '=' << value;
+}
+
 void write_initial_line(std::ostream& os) {
   os << "#ROSBAG V2.0\x0a";
 }
@@ -77,21 +72,28 @@ struct Serializer : public Test {
 };
 
 TEST_F(Serializer, Int32) {
-  IoUInt32 v(0x44434241u); // chr('A') = 0x41
+  uint32_t v(0x44434241u); // chr('A') = 0x41
 
-  ss << v;
+  write_value(ss, v);
 
   ASSERT_THAT(ss.str(), Eq(std::string("ABCD")));
 }
 
 TEST_F(Serializer, Int64) {
-  IoUInt64 v(0x3332313044434241ull); // chr('0') = 0x30
+  uint64_t v(0x3332313044434241ull); // chr('0') = 0x30
 
-  ss << v;
+  write_value(ss, v);
 
   ASSERT_THAT(ss.str(), Eq(std::string("ABCD0123")));
 }
 
+TEST_F(Serializer, KeyAndStringValue) {
+  void();
+
+  write_key_value(ss, "key", "value");
+
+  ASSERT_THAT(ss.str(), Eq(std::string("\x09\x00\x00\x00key=value", 4+9)));
+}
 
 SampleData const static_sample;
 
