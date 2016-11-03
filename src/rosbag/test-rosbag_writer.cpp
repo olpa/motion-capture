@@ -26,8 +26,14 @@ void write_value(std::ostream& os, uint64_t const v) {
 }
 
 void write_key_value(std::ostream& os, std::string const& key, std::string const&value) {
+  auto pos1 = os.tellp();
   write_value(os, static_cast<uint32_t>(0));
   os << key << '=' << value;
+  auto pos2 = os.tellp();
+  uint32_t len = static_cast<uint32_t>(pos2 - pos1 - 4);
+  os.seekp(pos1);
+  write_value(os, len);
+  os.seekp(pos2);
 }
 
 void write_initial_line(std::ostream& os) {
