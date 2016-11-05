@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <ios>
+#include <functional>
 #include <gmock/gmock.h>
 using namespace testing;
 
@@ -12,10 +13,21 @@ struct Header {
   uint8_t  op;
 };
 
+void write_initial_line(std::ostream& os) {
+  os << "#ROSBAG V2.0\x0a";
+}
+
 // Let's hope the host is little-endian
 // There are htonl() etc for big-endian (network),
 // but no equivalent for little-endian.
 //
+void write_value(std::ostream& os, uint8_t const v) {
+  os << v;
+}
+
+void write_value(std::ostream& os, std::string const& v) {
+  os << v;
+}
 
 void write_value(std::ostream& os, uint32_t const v) {
   os.write(reinterpret_cast<char const*>(&v), 4);
@@ -25,10 +37,10 @@ void write_value(std::ostream& os, uint64_t const v) {
   os.write(reinterpret_cast<char const*>(&v), 8);
 }
 
-void write_key_value(std::ostream& os, std::string const& key, std::string const&value) {
+void write_with_length_prefix(std::ostream& os, std::function<void()> core_func) {
   auto pos1 = os.tellp();
   write_value(os, static_cast<uint32_t>(0));
-  os << key << '=' << value;
+  core_func();
   auto pos2 = os.tellp();
   uint32_t len = static_cast<uint32_t>(pos2 - pos1 - 4);
   os.seekp(pos1);
@@ -36,11 +48,23 @@ void write_key_value(std::ostream& os, std::string const& key, std::string const
   os.seekp(pos2);
 }
 
-void write_initial_line(std::ostream& os) {
-  os << "#ROSBAG V2.0\x0a";
+template<class T>
+void write_key_value(std::ostream& os, std::string const& key, T const& value) {
+  auto core_func = [&](){
+    os << key << '=';
+    write_value(os, value);
+  };
+  write_with_length_prefix(os, core_func);
 }
 
 void write_header(std::ostream& os, Header const& h) {
+  auto core_func = [&](){
+    write_key_value(os, "chunk_count", h.chunk_count);
+    write_key_value(os, "conn_count",  h.conn_count);
+    write_key_value(os, "index_pos",   h.index_pos);
+    write_key_value(os, "op",          h.op);
+  };
+  write_with_length_prefix(os, core_func);
 }
 
 class SampleData {
@@ -66,7 +90,7 @@ public:
   }
 
   std::string header() const {
-    return bytes_.substr(17, 86-17);
+    return bytes_.substr(13, 86-13);
   }
 
 private:
@@ -76,6 +100,14 @@ private:
 struct Serializer : public Test {
   std::stringstream ss;
 };
+
+TEST_F(Serializer, Int8) {
+  uint8_t v('Q');
+
+  write_value(ss, v);
+
+  ASSERT_THAT(ss.str(), Eq(std::string("Q")));
+}
 
 TEST_F(Serializer, Int32) {
   uint32_t v(0x44434241u); // chr('A') = 0x41
@@ -116,7 +148,7 @@ TEST_F(Writer, Writes_Initial_Line) {
   ASSERT_THAT(ss.str(), Eq(sample.initial_line()));
 }
 
-TEST_F(Writer, DISABLED_Writes_Header) {
+TEST_F(Writer, Writes_Header) {
   Header h = sample.get_header_obj();
 
   write_header(ss, h);
