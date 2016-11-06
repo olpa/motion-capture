@@ -67,6 +67,25 @@ void write_header(std::ostream& os, Header const& h) {
   write_with_length_prefix(os, core_func);
 }
 
+void write_bag_header_record(std::ostream& os, Header const& h) {
+  // According to the documentation, the magic constant is 4096
+  // (the header is 4096 bytes long). However, according to the
+  // sample bag-files, it is not so.
+  const int magic_ros_constant = 4104;
+  auto pos1 = os.tellp();
+  write_header(os, h);
+  auto used_length = os.tellp() - pos1;
+  uint32_t padding_length = magic_ros_constant - used_length - 4;
+  if (padding_length > magic_ros_constant) {
+    // overfull, should never happen
+    padding_length = 0;
+  }
+  write_value(os, padding_length);
+  os << std::string(padding_length, ' ');
+}
+
+//
+
 class SampleData {
 public:
   SampleData() {
@@ -93,9 +112,15 @@ public:
     return bytes_.substr(13, 86-13);
   }
 
+  std::string bag_header_record() const {
+    return bytes_.substr(13, 4117-13);
+  }
+
 private:
   std::string bytes_;
 };
+
+//
 
 struct Serializer : public Test {
   std::stringstream ss;
@@ -154,6 +179,14 @@ TEST_F(Writer, Writes_Header) {
   write_header(ss, h);
 
   ASSERT_THAT(ss.str(), Eq(sample.header()));
+}
+
+TEST_F(Writer, Bag_Header_Record_Padded_To_4096_bytes) {
+  Header h = sample.get_header_obj();
+
+  write_bag_header_record(ss, h);
+
+  ASSERT_THAT(ss.str(), Eq(sample.bag_header_record()));
 }
 
 int main(int argc, char** argv) {
