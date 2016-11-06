@@ -13,6 +13,13 @@ struct Header {
   uint8_t  op;
 };
 
+struct MessageDefinition {
+  std::string topic;
+  std::string type;
+  std::string md5sum;
+  std::string message_definition;
+};
+
 void write_initial_line(std::ostream& os) {
   os << "#ROSBAG V2.0\x0a";
 }
@@ -67,6 +74,16 @@ void write_header(std::ostream& os, Header const& h) {
   write_with_length_prefix(os, core_func);
 }
 
+void write_message_definition(std::ostream& os, MessageDefinition const& m) {
+  auto core_func = [&]() {
+    write_key_value(os, "topic",  m.topic);
+    write_key_value(os, "message_definition", m.message_definition);
+    write_key_value(os, "md5sum", m.md5sum);
+    write_key_value(os, "type",   m.type);
+  };
+  write_with_length_prefix(os, core_func);
+}
+
 void write_bag_header_record(std::ostream& os, Header const& h) {
   // According to the documentation, the magic constant is 4096
   // (the header is 4096 bytes long). However, according to the
@@ -114,6 +131,19 @@ public:
 
   std::string bag_header_record() const {
     return bytes_.substr(13, 4117-13);
+  }
+
+  MessageDefinition get_message_definition_obj() const {
+    MessageDefinition m;
+    m.type = "tf/tfMessage";
+    m.md5sum = "94810edda583a504dfda3829e70d7eec";
+    m.message_definition = bytes_.substr(4244, 6062-4244);
+    m.topic = "/tf";
+    return m;
+  }
+
+  std::string message_definition() const {
+    return bytes_.substr(4204, 0x077e + 4);
   }
 
 private:
@@ -181,12 +211,20 @@ TEST_F(Writer, Writes_Header) {
   ASSERT_THAT(ss.str(), Eq(sample.header()));
 }
 
-TEST_F(Writer, Bag_Header_Record_Padded_To_4096_bytes) {
+TEST_F(Writer, Bag_Header_Record_Padded_To_Magic_Number_Of_Bytes) {
   Header h = sample.get_header_obj();
 
   write_bag_header_record(ss, h);
 
   ASSERT_THAT(ss.str(), Eq(sample.bag_header_record()));
+}
+
+TEST_F(Writer, Writes_Message_Definition) {
+  MessageDefinition m = sample.get_message_definition_obj();
+
+  write_message_definition(ss, m);
+
+  ASSERT_THAT(ss.str(), Eq(sample.message_definition()));
 }
 
 int main(int argc, char** argv) {
