@@ -43,3 +43,4 @@ The raw data for a message mostly corresponds to the message structure. The two 
 
 * The field `seq` in `Header` is always 0.
 * There is always the value 1 of the type `uint32` before the `Header`.
+* The documentation for the bag header record says that it "is 4096 bytes long". According to the samples, the magic constant is actually 4104.
