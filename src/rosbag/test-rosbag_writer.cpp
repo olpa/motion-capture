@@ -10,7 +10,12 @@ struct Header {
   uint32_t chunk_count;
   uint32_t conn_count;
   uint64_t index_pos;
+  std::string topic;
+  uint64_t time;
+  uint32_t conn;
   uint8_t  op;
+  Header(): chunk_count(0), conn_count(0), index_pos(-1),
+            topic(""), time(0), conn(0xffff), op(0) { };
 };
 
 struct MessageDefinition {
@@ -18,6 +23,9 @@ struct MessageDefinition {
   std::string type;
   std::string md5sum;
   std::string message_definition;
+};
+
+struct RosMsgTransformStamped {
 };
 
 void write_initial_line(std::ostream& os) {
@@ -66,10 +74,24 @@ void write_key_value(std::ostream& os, std::string const& key, T const& value) {
 
 void write_header(std::ostream& os, Header const& h) {
   auto core_func = [&](){
-    write_key_value(os, "chunk_count", h.chunk_count);
-    write_key_value(os, "conn_count",  h.conn_count);
-    write_key_value(os, "index_pos",   h.index_pos);
-    write_key_value(os, "op",          h.op);
+    if (h.chunk_count) {
+      write_key_value(os, "chunk_count", h.chunk_count);
+    }
+    if (h.conn_count) {
+      write_key_value(os, "conn_count",  h.conn_count);
+    }
+    if (h.index_pos) {
+      write_key_value(os, "index_pos",   h.index_pos);
+    }
+    if (h.time) {
+      write_key_value(os, "time",        h.time);
+    }
+    if (h.conn != 0xffff) {
+      write_key_value(os, "conn",        h.conn);
+    }
+    if (h.op) {
+      write_key_value(os, "op",          h.op);
+    }
   };
   write_with_length_prefix(os, core_func);
 }
@@ -99,6 +121,19 @@ void write_bag_header_record(std::ostream& os, Header const& h) {
   }
   write_value(os, padding_length);
   os << std::string(padding_length, ' ');
+}
+
+void write_message_raw_data(std::ostream& os, RosMsgTransformStamped const& m) {
+}
+
+void write_message(std::ostream& os, Header const& h, RosMsgTransformStamped const& m) {
+  write_header(os, h);
+  auto core_func = [&]() {
+    write_value(os, (uint32_t)1);
+    write_value(os, (uint32_t)0);
+    write_message_raw_data(os, m);
+  };
+  write_with_length_prefix(os, core_func);
 }
 
 //
@@ -144,6 +179,22 @@ public:
 
   std::string message_definition() const {
     return bytes_.substr(4204, 0x077e + 4);
+  }
+
+  Header get_tf_message_header_obj() const {
+    Header h;
+    h.topic = "/tf";
+    h.conn  = 0;
+    h.op    = 7;
+    return h;
+  }
+
+  RosMsgTransformStamped get_tf_message_obj() const {
+    return {};
+  }
+
+  std::string tf_message() const {
+    return bytes_.substr(6126, 6268-6126);
   }
 
 private:
@@ -225,6 +276,15 @@ TEST_F(Writer, Writes_Message_Definition) {
   write_message_definition(ss, m);
 
   ASSERT_THAT(ss.str(), Eq(sample.message_definition()));
+}
+
+TEST_F(Writer, Writes_TF_Message) {
+  Header h = sample.get_tf_message_header_obj();
+  RosMsgTransformStamped m = sample.get_tf_message_obj();
+
+  write_message(ss, h, m);
+
+  ASSERT_THAT(ss.str(), Eq(sample.tf_message()));
 }
 
 int main(int argc, char** argv) {
