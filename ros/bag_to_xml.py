@@ -58,7 +58,7 @@ def coded_string_to_int(s):
   return struct.unpack_from("<I", s)[0]
 
 def coded_string_to_long(s):
-  return struct.unpack_from("<I", s)[0]
+  return struct.unpack_from("<Q", s)[0]
 
 def read_initial_line(h):
   s = h.readline()
