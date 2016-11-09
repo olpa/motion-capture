@@ -1,5 +1,3 @@
-import geometry_msgs.msg
-
 class QuatWithEffect:
   def __init__(self):
     self.pos = [0, 0, 0, 0]
