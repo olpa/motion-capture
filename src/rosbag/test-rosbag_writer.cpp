@@ -14,7 +14,7 @@ struct Header {
   uint64_t time;
   uint32_t conn;
   uint8_t  op;
-  Header(): chunk_count(0), conn_count(0), index_pos(-1),
+  Header(): chunk_count(0), conn_count(0), index_pos(0),
             topic(""), time(0), conn(0xffff), op(0) { };
 };
 
@@ -25,7 +25,29 @@ struct MessageDefinition {
   std::string message_definition;
 };
 
+struct RosMsgHeader {
+  uint32_t    seq;
+  uint64_t    stamp;
+  std::string frame_id;
+};
+
+struct RosMsgVector3 {
+  double x, y, z;
+};
+
+struct RosMsgQuaternion {
+  double x, y, z, w;
+};
+
+struct RosMsgTransform {
+  RosMsgVector3    translation;
+  RosMsgQuaternion rotation;
+};
+
 struct RosMsgTransformStamped {
+  RosMsgHeader    header;
+  std::string     child_frame_id;
+  RosMsgTransform transform;
 };
 
 void write_initial_line(std::ostream& os) {
@@ -35,6 +57,9 @@ void write_initial_line(std::ostream& os) {
 // Let's hope the host is little-endian
 // There are htonl() etc for big-endian (network),
 // but no equivalent for little-endian.
+//
+// Also, let's hope that:
+// "double" of C++ uses 64 bit
 //
 void write_value(std::ostream& os, uint8_t const v) {
   os << v;
@@ -50,6 +75,34 @@ void write_value(std::ostream& os, uint32_t const v) {
 
 void write_value(std::ostream& os, uint64_t const v) {
   os.write(reinterpret_cast<char const*>(&v), 8);
+}
+
+void write_value(std::ostream& os, double const v) {
+  os.write(reinterpret_cast<char const*>(&v), 8);
+}
+
+template<class T>
+struct RosIoClass {
+  RosIoClass(T const& value) : value_(value) { };
+  T const& value_;
+};
+
+template<class T>
+std::ostream& operator<<(std::ostream& os, RosIoClass<T> const& value) {
+  write_value(os, value.value_);
+  return os;
+}
+
+template<class T>
+auto RosIO(T const& val) -> RosIoClass<T> {
+  return RosIoClass<T>(val);
+}
+
+template<>
+std::ostream& operator<<(std::ostream& os, RosIoClass<std::string> const& ros_s) {
+  std::string const& s = ros_s.value_;
+  os << RosIO(static_cast<uint32_t>(s.length())) << s;
+  return os;
 }
 
 void write_with_length_prefix(std::ostream& os, std::function<void()> core_func) {
@@ -123,14 +176,34 @@ void write_bag_header_record(std::ostream& os, Header const& h) {
   os << std::string(padding_length, ' ');
 }
 
+std::ostream& operator<<(std::ostream& os, RosMsgQuaternion const& m) {
+  return os << RosIO(m.x) << RosIO(m.y) << RosIO(m.z) << RosIO(m.w);
+}
+
+std::ostream& operator<<(std::ostream& os, RosMsgVector3 const& m) {
+  return os << RosIO(m.x) << RosIO(m.y) << RosIO(m.z);
+}
+
+std::ostream& operator<<(std::ostream& os, RosMsgTransform const& m) {
+  return os << m.translation << m.rotation;
+}
+
+std::ostream& operator<<(std::ostream& os, RosMsgHeader const& m) {
+  return os << RosIO(m.seq) << RosIO(m.stamp) << RosIO(m.frame_id);
+}
+
+std::ostream& operator<<(std::ostream& os, RosMsgTransformStamped const& m) {
+  return os << m.header << RosIO(m.child_frame_id) << m.transform;
+}
+
 void write_message_raw_data(std::ostream& os, RosMsgTransformStamped const& m) {
+  os << m;
 }
 
 void write_message(std::ostream& os, Header const& h, RosMsgTransformStamped const& m) {
   write_header(os, h);
   auto core_func = [&]() {
     write_value(os, (uint32_t)1);
-    write_value(os, (uint32_t)0);
     write_message_raw_data(os, m);
   };
   write_with_length_prefix(os, core_func);
@@ -183,14 +256,34 @@ public:
 
   Header get_tf_message_header_obj() const {
     Header h;
-    h.topic = "/tf";
+    h.time  = 1416593259237437348ul;
     h.conn  = 0;
-    h.op    = 7;
+    h.op    = 2;
     return h;
   }
 
   RosMsgTransformStamped get_tf_message_obj() const {
-    return {};
+    RosMsgHeader h;
+    h.seq  = 0;
+    h.stamp = 1414530047142752164ul; // TODO: from datetime
+    h.frame_id = "world";
+    RosMsgVector3 pos;
+    pos.x = 0;
+    pos.y = 0;
+    pos.z = 0;
+    RosMsgQuaternion rot; // 2nd: 0.65  0.8  0  1
+    rot.x = 0.6;
+    rot.y = 0.8999999999999999;
+    rot.z = 0.14999999999999994;
+    rot.w = 0.8;
+    RosMsgTransform tf;
+    tf.translation = pos;
+    tf.rotation = rot;
+    RosMsgTransformStamped m;
+    m.header = h;
+    m.child_frame_id = "imu_sensor1";
+    m.transform = tf;
+    return m;
   }
 
   std::string tf_message() const {
@@ -229,6 +322,14 @@ TEST_F(Serializer, Int64) {
   write_value(ss, v);
 
   ASSERT_THAT(ss.str(), Eq(std::string("ABCD0123")));
+}
+
+TEST_F(Serializer, RosStringPrefixedWithLength) {
+  RosIoClass<std::string> ros_s{"something"};
+
+  ss << ros_s;
+
+  ASSERT_THAT(ss.str(), Eq(std::string("\x09\0\0\0something", 9+4)));
 }
 
 TEST_F(Serializer, KeyAndStringValue) {
