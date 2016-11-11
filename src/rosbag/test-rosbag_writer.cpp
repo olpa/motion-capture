@@ -9,12 +9,14 @@ using namespace testing;
 struct Header {
   uint32_t chunk_count;
   uint32_t conn_count;
+  uint32_t count;
+  uint32_t ver;
   uint64_t index_pos;
   std::string topic;
   uint64_t time;
   uint32_t conn;
   uint8_t  op;
-  Header(): chunk_count(0), conn_count(0), index_pos(0),
+  Header(): chunk_count(0), conn_count(0), count(0), ver(0), index_pos(0),
             topic(""), time(0), conn(0xffff), op(0) { };
 };
 
@@ -22,6 +24,11 @@ struct Header {
 // Only partial here
 struct ConnectionHeader {
   std::string topic, message_definition, md5sum, type;
+};
+
+struct IndexEntry {
+  uint64_t time;
+  uint32_t offset;
 };
 
 struct MessageDefinition {
@@ -205,6 +212,12 @@ void write_header(std::ostream& os, Header const& h) {
     if (h.conn_count) {
       write_key_value(os, "conn_count",  h.conn_count);
     }
+    if (h.count) {
+      write_key_value(os, "count", h.count);
+    }
+    if (h.ver) {
+      write_key_value(os, "ver", h.ver);
+    }
     if (h.index_pos) {
       write_key_value(os, "index_pos",   h.index_pos);
     }
@@ -313,6 +326,22 @@ void write_message(std::ostream& os, Header const& h, RosMsgTransformStamped con
   write_with_length_prefix(os, core_func);
 }
 
+std::ostream& operator<<(std::ostream& os, IndexEntry const& ie) {
+  os << RosIO(ie.time) << RosIO(ie.offset);
+  return os;
+}
+
+template<class Iterator>
+void write_index_record(std::ostream& os, Header const& h, Iterator begin, Iterator end) {
+  os << h;
+  auto core_func = [&]() {
+    for (auto i = begin; i != end; ++i) {
+      os << *i;
+    }
+  };
+  write_with_length_prefix(os, core_func);
+}
+
 //
 
 class SampleData {
@@ -410,6 +439,28 @@ public:
 
   std::string connection_record() const {
     return bytes_.substr(4166, 6126-4166);
+  }
+
+  Header get_index_header_obj() {
+    Header h;
+    h.count = 2;
+    h.ver   = 1;
+    h.conn  = 0;
+    h.op    = 4;
+    return h;
+  }
+
+  std::vector<IndexEntry> get_index_objects() {
+    IndexEntry i1, i2;
+    i1.time = 1416593259237437348ul;
+    i1.offset = 1960;
+    i2.time = 1845739231743274916;
+    i2.offset = 2102;
+    return {i1, i2};
+  }
+
+  std::string index_record() const {
+    return bytes_.substr(6410, 6487-6408);
   }
 
 private:
@@ -518,6 +569,18 @@ TEST_F(Writer, Writes_Connection_Record) {
 
   ASSERT_THAT(ss.str(), Eq(sample.connection_record()));
 }
+
+TEST_F(Writer, Writes_Index_Record) {
+  Header h = sample.get_index_header_obj();
+  std::vector<IndexEntry> entries = sample.get_index_objects();
+
+  write_index_record(ss, h, entries.begin(), entries.end());
+
+  ASSERT_THAT(ss.str(), Eq(sample.index_record()));
+}
+
+// Index records: offsets are filled in
+// Opcodes are filled in
 
 int main(int argc, char** argv) {
   InitGoogleTest(&argc, argv);
