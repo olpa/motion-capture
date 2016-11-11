@@ -346,11 +346,7 @@ public:
   }
 
   MessageDefinition get_message_definition_obj() const {
-    MessageDefinition m;
-    m.type = "tf/tfMessage";
-    m.md5sum = "94810edda583a504dfda3829e70d7eec";
-    m.message_definition = bytes_.substr(4244, 6062-4244); // FIXME: from get_get_msg_def_TransformStamped
-    m.topic = "/tf";
+    MessageDefinition m = get_msg_def_TransformStamped();
     return m;
   }
 
