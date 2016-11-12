@@ -687,7 +687,7 @@ TEST_F(Writer, Writes_Chunk_Info_Record) {
   ASSERT_THAT(ss.str(), Eq(sample.chunk_info_record()));
 }
 
-TEST_F(Writer, DISABLED_Writes_The_Complete_Document_Back) {
+TEST_F(Writer, Writes_The_Complete_Document_Back) {
   Header h_head  = sample.get_header_obj();
   Header h_chunk = sample.get_chunk_header_obj();
   Header h_conn  = sample.get_connection_header_obj();
@@ -705,10 +705,10 @@ TEST_F(Writer, DISABLED_Writes_The_Complete_Document_Back) {
   auto pos = reserve_size_value(ss);
   write_connection_record(ss, h_conn, ch);
   write_messages(ss, hs_message.begin(), hs_message.end(), ms.begin());
+  fixate_size_value(ss, pos); // FIXME: why here ok? Why in XML, index etc also inside this connection record?
   write_index_record(ss, h_index_data, index_entries.begin(), index_entries.end());
   write_connection_record(ss, h_conn, ch);
   write_chunk_info_record(ss, h_chunk_info, chunk_info_entries.begin(), chunk_info_entries.end());
-  fixate_size_value(ss, pos);
 
   std::ofstream f1("/home/olpa/tmp/f1"); // FIXME
   f1 << ss.str();
