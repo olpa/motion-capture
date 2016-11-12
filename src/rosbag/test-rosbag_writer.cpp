@@ -15,9 +15,13 @@ struct Header {
   std::string topic;
   uint64_t time;
   uint32_t conn;
+  uint64_t start_time;
+  uint64_t chunk_pos;
+  uint64_t end_time;
   uint8_t  op;
   Header(): chunk_count(0), conn_count(0), count(0), ver(0), index_pos(0),
-            topic(""), time(0), conn(0xffff), op(0) { };
+            topic(""), time(0), conn(0xffff), start_time(0),
+            chunk_pos(0), end_time(0), op(0) { };
 };
 
 // http://wiki.ros.org/ROS/Connection%20Header
@@ -29,6 +33,11 @@ struct ConnectionHeader {
 struct IndexEntry {
   uint64_t time;
   uint32_t offset;
+};
+
+struct ChunkInfoEntry {
+  uint32_t conn;
+  uint32_t count;
 };
 
 struct MessageDefinition {
@@ -230,6 +239,15 @@ void write_header(std::ostream& os, Header const& h) {
     if (h.conn != 0xffff) {
       write_key_value(os, "conn",        h.conn);
     }
+    if (h.start_time) {
+      write_key_value(os, "start_time",  h.start_time);
+    }
+    if (h.chunk_pos) {
+      write_key_value(os, "chunk_pos",   h.chunk_pos);
+    }
+    if (h.end_time) {
+      write_key_value(os, "end_time",    h.end_time);
+    }
     if (h.op) {
       write_key_value(os, "op",          h.op);
     }
@@ -331,8 +349,24 @@ std::ostream& operator<<(std::ostream& os, IndexEntry const& ie) {
   return os;
 }
 
+std::ostream& operator<<(std::ostream& os, ChunkInfoEntry const& cie) {
+  os << RosIO(cie.conn) << RosIO(cie.count);
+  return os;
+}
+
 template<class Iterator>
 void write_index_record(std::ostream& os, Header const& h, Iterator begin, Iterator end) {
+  os << h;
+  auto core_func = [&]() {
+    for (auto i = begin; i != end; ++i) {
+      os << *i;
+    }
+  };
+  write_with_length_prefix(os, core_func);
+}
+
+template<class Iterator>
+void write_chunk_info_record(std::ostream& os, Header const& h, Iterator begin, Iterator end) {
   os << h;
   auto core_func = [&]() {
     for (auto i = begin; i != end; ++i) {
@@ -463,6 +497,28 @@ public:
     return bytes_.substr(6410, 6487-6408);
   }
 
+  Header get_chunk_info_header_obj() {
+    Header h;
+    h.count = 1;
+    h.ver   = 1;
+    h.start_time = 1416593259237437348ul;
+    h.chunk_pos  = 4117;
+    h.end_time   = 1845739231743274916;
+    h.op    = 6;
+    return h;
+  }
+
+  std::vector<ChunkInfoEntry> get_chunk_info_objects() {
+    ChunkInfoEntry cie;
+    cie.conn  = 0;
+    cie.count = 2;
+    return {cie};
+  }
+
+  std::string chunk_info_record() const {
+    return bytes_.substr(8449);
+  }
+
 private:
   std::string bytes_;
 };
@@ -577,6 +633,15 @@ TEST_F(Writer, Writes_Index_Record) {
   write_index_record(ss, h, entries.begin(), entries.end());
 
   ASSERT_THAT(ss.str(), Eq(sample.index_record()));
+}
+
+TEST_F(Writer, Writes_Chunk_Info_Record) {
+  Header h = sample.get_chunk_info_header_obj();
+  std::vector<ChunkInfoEntry> entries = sample.get_chunk_info_objects();
+
+  write_chunk_info_record(ss, h, entries.begin(), entries.end());
+
+  ASSERT_THAT(ss.str(), Eq(sample.chunk_info_record()));
 }
 
 // Index records: offsets are filled in
