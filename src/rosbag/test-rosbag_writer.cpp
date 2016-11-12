@@ -15,13 +15,15 @@ struct Header {
   std::string topic;
   uint64_t time;
   uint32_t conn;
+  uint32_t size;
+  std::string compression;
   uint64_t start_time;
   uint64_t chunk_pos;
   uint64_t end_time;
   uint8_t  op;
   Header(): chunk_count(0), conn_count(0), count(0), ver(0), index_pos(0),
-            topic(""), time(0), conn(0xffff), start_time(0),
-            chunk_pos(0), end_time(0), op(0) { };
+            topic(""), time(0), conn(0xffff), size(0), compression(""),
+            start_time(0), chunk_pos(0), end_time(0), op(0) { };
 };
 
 // http://wiki.ros.org/ROS/Connection%20Header
@@ -193,15 +195,27 @@ std::ostream& operator<<(std::ostream& os, RosIoClass<std::string> const& ros_s)
   return os;
 }
 
-void write_with_length_prefix(std::ostream& os, std::function<void()> core_func) {
-  auto pos1 = os.tellp();
+// http://stackoverflow.com/questions/16825351/
+using pos_type = std::char_traits<char>::pos_type;
+
+pos_type reserve_size_value(std::ostream& os) {
+  auto pos = os.tellp();
   write_value(os, static_cast<uint32_t>(0));
-  core_func();
+  return pos;
+}
+
+void fixate_size_value(std::ostream& os, pos_type const pos) {
   auto pos2 = os.tellp();
-  uint32_t len = static_cast<uint32_t>(pos2 - pos1 - 4);
-  os.seekp(pos1);
-  write_value(os, len);
+  uint32_t size = static_cast<uint32_t>(pos2 - pos - 4);
+  os.seekp(pos);
+  write_value(os, size);
   os.seekp(pos2);
+}
+
+void write_with_length_prefix(std::ostream& os, std::function<void()> core_func) {
+  auto pos = reserve_size_value(os);
+  core_func();
+  fixate_size_value(os, pos);
 }
 
 template<class T>
@@ -247,6 +261,12 @@ void write_header(std::ostream& os, Header const& h) {
     }
     if (h.end_time) {
       write_key_value(os, "end_time",    h.end_time);
+    }
+    if (h.size) {
+      write_key_value(os, "size",        h.size);
+    }
+    if (h.compression.length()) {
+      write_key_value(os, "compression", h.compression);
     }
     if (h.op) {
       write_key_value(os, "op",          h.op);
@@ -335,13 +355,16 @@ void write_message_raw_data(std::ostream& os, RosMsgTransformStamped const& m) {
   os << m;
 }
 
-void write_message(std::ostream& os, Header const& h, RosMsgTransformStamped const& m) {
-  write_header(os, h);
-  auto core_func = [&]() {
-    write_value(os, (uint32_t)1);
-    write_message_raw_data(os, m);
-  };
-  write_with_length_prefix(os, core_func);
+template<class IteratorH, class IteratorM>
+void write_messages(std::ostream& os, IteratorH begin, IteratorH end, IteratorM im) {
+  for (auto i = begin; i != end; ++i) {
+    write_header(os, *i);
+    auto core_func = [&]() {
+      write_value(os, (uint32_t)1);
+      write_message_raw_data(os, *im++);
+    };
+    write_with_length_prefix(os, core_func);
+  }
 }
 
 std::ostream& operator<<(std::ostream& os, IndexEntry const& ie) {
@@ -408,6 +431,14 @@ public:
     return bytes_.substr(13, 4117-13);
   }
 
+  Header get_chunk_header_obj() const {
+    Header h;
+    h.size = 2244;
+    h.compression = "none";
+    h.op = 5;
+    return h;
+  }
+
   MessageDefinition get_message_definition_obj() const {
     MessageDefinition m = get_msg_def_TransformStamped();
     return m;
@@ -417,18 +448,20 @@ public:
     return bytes_.substr(4204, 0x077e + 4);
   }
 
-  Header get_tf_message_header_obj() const {
-    Header h;
-    h.time  = 1416593259237437348ul;
-    h.conn  = 0;
-    h.op    = 2;
-    return h;
+  std::vector<Header> get_tf_message_header_objects() const {
+    Header h1;
+    h1.time  = 1416593259237437348ul;
+    h1.conn  = 0;
+    h1.op    = 2;
+    Header h2 = h1;
+    h2.time = 1845739231743274916;
+    return {h1, h2};
   }
 
-  RosMsgTransformStamped get_tf_message_obj() const {
+  std::vector<RosMsgTransformStamped> get_tf_message_objects() const {
     RosMsgHeader h;
     h.seq  = 0;
-    h.stamp = 1414530047142752164ul; // TODO: from datetime
+    h.stamp = 1414530047142752164ul;
     h.frame_id = "world";
     RosMsgVector3 pos;
     pos.x = 0;
@@ -442,15 +475,21 @@ public:
     RosMsgTransform tf;
     tf.translation = pos;
     tf.rotation = rot;
-    RosMsgTransformStamped m;
-    m.header = h;
-    m.child_frame_id = "imu_sensor1";
-    m.transform = tf;
-    return m;
+    RosMsgTransformStamped m1, m2;
+    m1.header = h;
+    m1.child_frame_id = "imu_sensor1";
+    m1.transform = tf;
+    m2 = m1;
+    m2.header.stamp = 1844095998730661796ul;
+    m2.transform.rotation.x = 0.65;
+    m2.transform.rotation.y = 0.7999999999999999;
+    m2.transform.rotation.z = -5.551115123125783e-17;
+    m2.transform.rotation.w = 1.0;
+    return {m1, m2};
   }
 
-  std::string tf_message() const {
-    return bytes_.substr(6126, 6268-6126);
+  std::string tf_messages() const {
+    return bytes_.substr(6126, 6410-6126);
   }
 
   Header get_connection_header_obj() {
@@ -517,6 +556,10 @@ public:
 
   std::string chunk_info_record() const {
     return bytes_.substr(8449);
+  }
+
+  std::string whole_file() const {
+    return bytes_;
   }
 
 private:
@@ -608,13 +651,13 @@ TEST_F(Writer, Writes_Message_Definition) {
   ASSERT_THAT(ss.str(), Eq(sample.message_definition()));
 }
 
-TEST_F(Writer, Writes_TF_Message) {
-  Header h = sample.get_tf_message_header_obj();
-  RosMsgTransformStamped m = sample.get_tf_message_obj();
+TEST_F(Writer, Writes_TF_Messages) {
+  std::vector<Header> hs = sample.get_tf_message_header_objects();
+  std::vector<RosMsgTransformStamped> ms = sample.get_tf_message_objects();
 
-  write_message(ss, h, m);
+  write_messages(ss, hs.begin(), hs.end(), ms.begin());
 
-  ASSERT_THAT(ss.str(), Eq(sample.tf_message()));
+  ASSERT_THAT(ss.str(), Eq(sample.tf_messages()));
 }
 
 TEST_F(Writer, Writes_Connection_Record) {
@@ -642,6 +685,34 @@ TEST_F(Writer, Writes_Chunk_Info_Record) {
   write_chunk_info_record(ss, h, entries.begin(), entries.end());
 
   ASSERT_THAT(ss.str(), Eq(sample.chunk_info_record()));
+}
+
+TEST_F(Writer, DISABLED_Writes_The_Complete_Document_Back) {
+  Header h_head  = sample.get_header_obj();
+  Header h_chunk = sample.get_chunk_header_obj();
+  Header h_conn  = sample.get_connection_header_obj();
+  ConnectionHeader ch = sample.get_connection_obj();
+  std::vector<Header> hs_message = sample.get_tf_message_header_objects();
+  std::vector<RosMsgTransformStamped> ms = sample.get_tf_message_objects();
+  Header h_index_data = sample.get_index_header_obj();
+  std::vector<IndexEntry> index_entries = sample.get_index_objects();
+  Header h_chunk_info = sample.get_chunk_info_header_obj();
+  std::vector<ChunkInfoEntry> chunk_info_entries = sample.get_chunk_info_objects();
+
+  write_initial_line(ss);
+  write_bag_header_record(ss, h_head);
+  write_header(ss, h_chunk);
+  auto pos = reserve_size_value(ss);
+  write_connection_record(ss, h_conn, ch);
+  write_messages(ss, hs_message.begin(), hs_message.end(), ms.begin());
+  write_index_record(ss, h_index_data, index_entries.begin(), index_entries.end());
+  write_connection_record(ss, h_conn, ch);
+  write_chunk_info_record(ss, h_chunk_info, chunk_info_entries.begin(), chunk_info_entries.end());
+  fixate_size_value(ss, pos);
+
+  std::ofstream f1("/home/olpa/tmp/f1"); // FIXME
+  f1 << ss.str();
+  ASSERT_THAT(ss.str(), Eq(sample.whole_file()));
 }
 
 // Index records: offsets are filled in
