@@ -57,30 +57,30 @@
         <offset int="2102">6&#xe008;&#xe000;&#xe000;</offset>
       </index>
     </record>
-    <record>
-      <header>
-        <topic>/tf</topic>
-        <conn int="0">&#xe000;&#xe000;&#xe000;&#xe000;</conn>
-        <op>&#xe007;</op>
-      </header>
+  </record>
+  <record>
+    <header>
       <topic>/tf</topic>
-      <message_definition>geometry_msgs/TransformStamped[] transforms&#xe00a;&#xe00a;================================================================================&#xe00a;MSG: geometry_msgs/TransformStamped&#xe00a;# This expresses a transform from coordinate frame header.frame_id&#xe00a;# to the coordinate frame child_frame_id&#xe00a;#&#xe00a;# This message is mostly used by the &#xe00a;# &lt;a href="http://wiki.ros.org/tf"&gt;tf&lt;/a&gt; package. &#xe00a;# See its documentation for more information.&#xe00a;&#xe00a;Header header&#xe00a;string child_frame_id # the frame id of the child frame&#xe00a;Transform transform&#xe00a;&#xe00a;================================================================================&#xe00a;MSG: std_msgs/Header&#xe00a;# Standard metadata for higher-level stamped data types.&#xe00a;# This is generally used to communicate timestamped data &#xe00a;# in a particular coordinate frame.&#xe00a;# &#xe00a;# sequence ID: consecutively increasing ID &#xe00a;uint32 seq&#xe00a;#Two-integer timestamp that is expressed as:&#xe00a;# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')&#xe00a;# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')&#xe00a;# time-handling sugar is provided by the client library&#xe00a;time stamp&#xe00a;#Frame this data is associated with&#xe00a;# 0: no frame&#xe00a;# 1: global frame&#xe00a;string frame_id&#xe00a;&#xe00a;================================================================================&#xe00a;MSG: geometry_msgs/Transform&#xe00a;# This represents the transform between two coordinate frames in free space.&#xe00a;&#xe00a;Vector3 translation&#xe00a;Quaternion rotation&#xe00a;&#xe00a;================================================================================&#xe00a;MSG: geometry_msgs/Vector3&#xe00a;# This represents a vector in free space. &#xe00a;&#xe00a;float64 x&#xe00a;float64 y&#xe00a;float64 z&#xe00a;================================================================================&#xe00a;MSG: geometry_msgs/Quaternion&#xe00a;# This represents an orientation in free space in quaternion form.&#xe00a;&#xe00a;float64 x&#xe00a;float64 y&#xe00a;float64 z&#xe00a;float64 w&#xe00a;&#xe00a;&#xe00a;</message_definition>
-      <md5sum>94810edda583a504dfda3829e70d7eec</md5sum>
-      <type>tf/tfMessage</type>
-    </record>
-    <record>
-      <header>
-        <count int="1">&#xe001;&#xe000;&#xe000;&#xe000;</count>
-        <ver int="1">&#xe001;&#xe000;&#xe000;&#xe000;</ver>
-        <start_time long="1416593259237437348">&#xa4;o&#xe00f;X&#xe010;&#xc0;&#xa8;&#xe013;</start_time>
-        <chunk_pos long="4117">&#xe015;&#xe010;&#xe000;&#xe000;&#xe000;&#xe000;&#xe000;&#xe000;</chunk_pos>
-        <end_time long="1845739231743274916">&#xa4;o&#xe00f;X&#xe00d;b&#x9d;&#xe019;</end_time>
-        <op>&#xe006;</op>
-      </header>
-      <chunk>
-        <conn int="0">&#xe000;&#xe000;&#xe000;&#xe000;</conn>
-        <count int="2">&#xe002;&#xe000;&#xe000;&#xe000;</count>
-      </chunk>
-    </record>
+      <conn int="0">&#xe000;&#xe000;&#xe000;&#xe000;</conn>
+      <op>&#xe007;</op>
+    </header>
+    <topic>/tf</topic>
+    <message_definition>geometry_msgs/TransformStamped[] transforms&#xe00a;&#xe00a;================================================================================&#xe00a;MSG: geometry_msgs/TransformStamped&#xe00a;# This expresses a transform from coordinate frame header.frame_id&#xe00a;# to the coordinate frame child_frame_id&#xe00a;#&#xe00a;# This message is mostly used by the &#xe00a;# &lt;a href="http://wiki.ros.org/tf"&gt;tf&lt;/a&gt; package. &#xe00a;# See its documentation for more information.&#xe00a;&#xe00a;Header header&#xe00a;string child_frame_id # the frame id of the child frame&#xe00a;Transform transform&#xe00a;&#xe00a;================================================================================&#xe00a;MSG: std_msgs/Header&#xe00a;# Standard metadata for higher-level stamped data types.&#xe00a;# This is generally used to communicate timestamped data &#xe00a;# in a particular coordinate frame.&#xe00a;# &#xe00a;# sequence ID: consecutively increasing ID &#xe00a;uint32 seq&#xe00a;#Two-integer timestamp that is expressed as:&#xe00a;# * stamp.sec: seconds (stamp_secs) since epoch (in Python the variable is called 'secs')&#xe00a;# * stamp.nsec: nanoseconds since stamp_secs (in Python the variable is called 'nsecs')&#xe00a;# time-handling sugar is provided by the client library&#xe00a;time stamp&#xe00a;#Frame this data is associated with&#xe00a;# 0: no frame&#xe00a;# 1: global frame&#xe00a;string frame_id&#xe00a;&#xe00a;================================================================================&#xe00a;MSG: geometry_msgs/Transform&#xe00a;# This represents the transform between two coordinate frames in free space.&#xe00a;&#xe00a;Vector3 translation&#xe00a;Quaternion rotation&#xe00a;&#xe00a;================================================================================&#xe00a;MSG: geometry_msgs/Vector3&#xe00a;# This represents a vector in free space. &#xe00a;&#xe00a;float64 x&#xe00a;float64 y&#xe00a;float64 z&#xe00a;================================================================================&#xe00a;MSG: geometry_msgs/Quaternion&#xe00a;# This represents an orientation in free space in quaternion form.&#xe00a;&#xe00a;float64 x&#xe00a;float64 y&#xe00a;float64 z&#xe00a;float64 w&#xe00a;&#xe00a;&#xe00a;</message_definition>
+    <md5sum>94810edda583a504dfda3829e70d7eec</md5sum>
+    <type>tf/tfMessage</type>
+  </record>
+  <record>
+    <header>
+      <count int="1">&#xe001;&#xe000;&#xe000;&#xe000;</count>
+      <ver int="1">&#xe001;&#xe000;&#xe000;&#xe000;</ver>
+      <start_time long="1416593259237437348">&#xa4;o&#xe00f;X&#xe010;&#xc0;&#xa8;&#xe013;</start_time>
+      <chunk_pos long="4117">&#xe015;&#xe010;&#xe000;&#xe000;&#xe000;&#xe000;&#xe000;&#xe000;</chunk_pos>
+      <end_time long="1845739231743274916">&#xa4;o&#xe00f;X&#xe00d;b&#x9d;&#xe019;</end_time>
+      <op>&#xe006;</op>
+    </header>
+    <chunk>
+      <conn int="0">&#xe000;&#xe000;&#xe000;&#xe000;</conn>
+      <count int="2">&#xe002;&#xe000;&#xe000;&#xe000;</count>
+    </chunk>
   </record>
 </rosbag>

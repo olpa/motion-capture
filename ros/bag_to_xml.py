@@ -65,8 +65,10 @@ def read_initial_line(h):
   s = s.strip()
   assert "#ROSBAG V2.0" == s
 
-def loop_over_records(h, wr):
-  while True:
+
+
+def loop_over_records(h, wr, rest_data_len=None):
+  while (rest_data_len is None) or (rest_data_len > 0):
     s_header_len = h.read(4)
     if not s_header_len:
       break
@@ -88,12 +90,14 @@ def loop_over_records(h, wr):
         handle_record_chunk(h, wr, data_len)
       else:
         handle_data_skip(h, wr, data_len)
+      if rest_data_len is not None:
+        rest_data_len = rest_data_len - header_len - data_len
 
 def handle_record_connection(h, wr, data_len):
   loop_over_header(h, wr, data_len)
 
 def handle_record_chunk(h, wr, data_len):
-  loop_over_records(h, wr)
+  loop_over_records(h, wr, data_len)
 
 def handle_record_chunk_info(h, rw, rec):
   for i in range(coded_string_to_int(rec["count"])):
