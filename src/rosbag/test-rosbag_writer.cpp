@@ -156,26 +156,6 @@ void write_initial_line(std::ostream& os) {
 // Also, let's hope that:
 // "double" of C++ uses 64 bit
 //
-void write_value(std::ostream& os, uint8_t const v) {
-  os << v;
-}
-
-void write_value(std::ostream& os, std::string const& v) {
-  os << v;
-}
-
-void write_value(std::ostream& os, uint32_t const v) {
-  os.write(reinterpret_cast<char const*>(&v), 4);
-}
-
-void write_value(std::ostream& os, uint64_t const v) {
-  os.write(reinterpret_cast<char const*>(&v), 8);
-}
-
-void write_value(std::ostream& os, double const v) {
-  os.write(reinterpret_cast<char const*>(&v), 8);
-}
-
 template<class T>
 struct RosIoClass {
   RosIoClass(T const& value) : value_(value) { };
@@ -183,21 +163,31 @@ struct RosIoClass {
 };
 
 template<class T>
-std::ostream& operator<<(std::ostream& os, RosIoClass<T> const& value) {
-  write_value(os, value.value_);
-  return os;
-}
-
-template<class T>
 auto RosIO(T const& val) -> RosIoClass<T> {
   return RosIoClass<T>(val);
 }
 
-template<>
-std::ostream& operator<<(std::ostream& os, RosIoClass<std::string> const& ros_s) {
-  std::string const& s = ros_s.value_;
-  os << RosIO(static_cast<uint32_t>(s.length())) << s;
+std::ostream& operator<<(std::ostream& os, RosIoClass<uint8_t> const& v) {
+  return os << v.value_;
+}
+
+std::ostream& operator<<(std::ostream& os, RosIoClass<uint32_t> const& v) {
+  os.write(reinterpret_cast<char const*>(&v.value_), 4);
   return os;
+}
+
+std::ostream& operator<<(std::ostream& os, RosIoClass<uint64_t> const& v) {
+  os.write(reinterpret_cast<char const*>(&v.value_), 8);
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, RosIoClass<double> const& v) {
+  os.write(reinterpret_cast<char const*>(&v.value_), 8);
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, RosIoClass<std::string> const& v) {
+  return os << v.value_;
 }
 
 // http://stackoverflow.com/questions/16825351/
@@ -205,7 +195,7 @@ using pos_type = std::char_traits<char>::pos_type;
 
 pos_type reserve_size_value(std::ostream& os) {
   auto pos = os.tellp();
-  write_value(os, static_cast<uint32_t>(0));
+  os << RosIO<uint32_t>(0);
   return pos;
 }
 
@@ -213,7 +203,7 @@ void fixate_size_value(std::ostream& os, pos_type const pos) {
   auto pos2 = os.tellp();
   uint32_t size = static_cast<uint32_t>(pos2 - pos - 4);
   os.seekp(pos);
-  write_value(os, size);
+  os << RosIO(size);
   os.seekp(pos2);
 }
 
@@ -226,8 +216,7 @@ void write_with_length_prefix(std::ostream& os, std::function<void()> core_func)
 template<class T>
 void write_key_value(std::ostream& os, std::string const& key, T const& value) {
   auto core_func = [&](){
-    os << key << '=';
-    write_value(os, value);
+    os << key << '=' << RosIO(value);
   };
   write_with_length_prefix(os, core_func);
 }
@@ -317,8 +306,7 @@ void write_bag_header_record(std::ostream& os, Header const& h) {
     // overfull, should never happen
     padding_length = 0;
   }
-  write_value(os, padding_length);
-  os << std::string(padding_length, ' ');
+  os << RosIO(padding_length) << std::string(padding_length, ' ');
 }
 
 void write_connection_record(std::ostream& os, Header const& h, ConnectionHeader const& ch) {
@@ -342,11 +330,16 @@ std::ostream& operator<<(std::ostream& os, RosMsgTransform const& m) {
 }
 
 std::ostream& operator<<(std::ostream& os, RosMsgHeader const& m) {
-  return os << RosIO(m.seq) << RosIO(m.stamp) << RosIO(m.frame_id);
+  return os
+    << RosIO(m.seq) << RosIO(m.stamp)
+    << RosIO<uint32_t>(m.frame_id.length()) << RosIO(m.frame_id);
 }
 
 std::ostream& operator<<(std::ostream& os, RosMsgTransformStamped const& m) {
-  return os << m.header << RosIO(m.child_frame_id) << m.transform;
+  return os
+    << m.header
+    << RosIO<uint32_t>(m.child_frame_id.length()) << RosIO(m.child_frame_id)
+    << m.transform;
 }
 
 void write_message_raw_data(std::ostream& os, RosMsgTransformStamped const& m) {
@@ -358,7 +351,7 @@ void write_messages(std::ostream& os, IteratorH begin, IteratorH end, IteratorM 
   for (auto i = begin; i != end; ++i) {
     write_header(os, *i);
     auto core_func = [&]() {
-      write_value(os, (uint32_t)1);
+      os << RosIO<uint32_t>(1);
       write_message_raw_data(os, *im++);
     };
     write_with_length_prefix(os, core_func);
@@ -573,7 +566,7 @@ struct Serializer : public Test {
 TEST_F(Serializer, Int8) {
   uint8_t v('Q');
 
-  write_value(ss, v);
+  ss << RosIO(v);
 
   ASSERT_THAT(ss.str(), Eq(std::string("Q")));
 }
@@ -581,7 +574,7 @@ TEST_F(Serializer, Int8) {
 TEST_F(Serializer, Int32) {
   uint32_t v(0x44434241u); // chr('A') = 0x41
 
-  write_value(ss, v);
+  ss << RosIO(v);
 
   ASSERT_THAT(ss.str(), Eq(std::string("ABCD")));
 }
@@ -589,23 +582,15 @@ TEST_F(Serializer, Int32) {
 TEST_F(Serializer, Int64) {
   uint64_t v(0x3332313044434241ull); // chr('0') = 0x30
 
-  write_value(ss, v);
+  ss << RosIO(v);
 
   ASSERT_THAT(ss.str(), Eq(std::string("ABCD0123")));
-}
-
-TEST_F(Serializer, RosStringPrefixedWithLength) {
-  RosIoClass<std::string> ros_s{"something"};
-
-  ss << ros_s;
-
-  ASSERT_THAT(ss.str(), Eq(std::string("\x09\0\0\0something", 9+4)));
 }
 
 TEST_F(Serializer, KeyAndStringValue) {
   void();
 
-  write_key_value(ss, "key", "value");
+  write_key_value(ss, "key", std::string("value"));
 
   ASSERT_THAT(ss.str(), Eq(std::string("\x09\x00\x00\x00key=value", 4+9)));
 }
@@ -715,6 +700,8 @@ TEST_F(Writer, Writes_The_Complete_Document_Back) {
 // Index records: offsets are filled in
 // Opcodes are filled in
 
+// at start writes also header
+// at start checks the system settings (endianess, float size)
 //wr.will_write_events_of_type(that);
 //wr.add_event();
 //wr.add_event();
