@@ -221,7 +221,7 @@ void write_key_value(std::ostream& os, std::string const& key, T const& value) {
   write_with_length_prefix(os, core_func);
 }
 
-void write_header(std::ostream& os, Header const& h) {
+std::ostream& operator<<(std::ostream& os, Header const& h) {
   auto core_func = [&](){
     Header::Opcodes op = static_cast<Header::Opcodes>(h.op);
     switch (op) {
@@ -260,26 +260,18 @@ void write_header(std::ostream& os, Header const& h) {
     write_key_value(os, "op", h.op);
   };
   write_with_length_prefix(os, core_func);
-}
-
-// FIXME refactor
-std::ostream& operator<<(std::ostream& os, ConnectionHeader const& ch) {
-  if (ch.topic.length()) {
-    write_key_value(os, "topic", ch.topic);
-  }
-  if (ch.message_definition.length()) {
-    write_key_value(os, "message_definition", ch.message_definition);
-  }
-  if (ch.md5sum.length()) {
-    write_key_value(os, "md5sum", ch.md5sum);
-  }
-  if (ch.type.length()) {
-    write_key_value(os, "type", ch.type);
-  }
   return os;
 }
 
-void write_message_definition(std::ostream& os, MessageDefinition const& m) {
+std::ostream& operator<<(std::ostream& os, ConnectionHeader const& ch) {
+  write_key_value(os, "topic",  ch.topic);
+  write_key_value(os, "message_definition", ch.message_definition);
+  write_key_value(os, "md5sum", ch.md5sum);
+  write_key_value(os, "type",   ch.type);
+  return os;
+}
+
+std::ostream& operator<<(std::ostream& os, MessageDefinition const& m) {
   auto core_func = [&]() {
     write_key_value(os, "topic",  m.topic);
     write_key_value(os, "message_definition", m.message_definition);
@@ -287,6 +279,7 @@ void write_message_definition(std::ostream& os, MessageDefinition const& m) {
     write_key_value(os, "type",   m.type);
   };
   write_with_length_prefix(os, core_func);
+  return os;
 }
 
 void write_bag_header_record(std::ostream& os, Header const& h) {
@@ -295,7 +288,7 @@ void write_bag_header_record(std::ostream& os, Header const& h) {
   // sample bag-files, it is not so.
   const int magic_ros_constant = 4104;
   auto pos1 = os.tellp();
-  write_header(os, h);
+  os << h;
   auto used_length = os.tellp() - pos1;
   uint32_t padding_length = magic_ros_constant - used_length - 4;
   if (padding_length > magic_ros_constant) {
@@ -306,7 +299,7 @@ void write_bag_header_record(std::ostream& os, Header const& h) {
 }
 
 void write_connection_record(std::ostream& os, Header const& h, ConnectionHeader const& ch) {
-  write_header(os, h);
+  os << h;
   auto core_func = [&]() {
     os << ch;
   };
@@ -338,17 +331,12 @@ std::ostream& operator<<(std::ostream& os, RosMsgTransformStamped const& m) {
     << m.transform;
 }
 
-void write_message_raw_data(std::ostream& os, RosMsgTransformStamped const& m) {
-  os << m;
-}
-
 template<class IteratorH, class IteratorM>
 void write_messages(std::ostream& os, IteratorH begin, IteratorH end, IteratorM im) {
   for (auto i = begin; i != end; ++i) {
-    write_header(os, *i);
+    os << *i;
     auto core_func = [&]() {
-      os << RosIO<uint32_t>(1);
-      write_message_raw_data(os, *im++);
+      os << RosIO<uint32_t>(1) << *im++;
     };
     write_with_length_prefix(os, core_func);
   }
@@ -366,7 +354,7 @@ std::ostream& operator<<(std::ostream& os, ChunkInfoEntry const& cie) {
 
 template<class Iterator>
 void write_index_record(std::ostream& os, Header const& h, Iterator begin, Iterator end) {
-  write_header(os, h);
+  os << h;
   auto core_func = [&]() {
     for (auto i = begin; i != end; ++i) {
       os << *i;
@@ -377,7 +365,7 @@ void write_index_record(std::ostream& os, Header const& h, Iterator begin, Itera
 
 template<class Iterator>
 void write_chunk_info_record(std::ostream& os, Header const& h, Iterator begin, Iterator end) {
-  write_header(os, h);
+  os << h;
   auto core_func = [&]() {
     for (auto i = begin; i != end; ++i) {
       os << *i;
@@ -609,7 +597,7 @@ TEST_F(Writer, Writes_Initial_Line) {
 TEST_F(Writer, Writes_Header) {
   Header h = sample.get_header_obj();
 
-  write_header(ss, h);
+  ss << h;
 
   ASSERT_THAT(ss.str(), Eq(sample.header()));
 }
@@ -625,7 +613,7 @@ TEST_F(Writer, Bag_Header_Record_Padded_To_Magic_Number_Of_Bytes) {
 TEST_F(Writer, Writes_Message_Definition) {
   MessageDefinition m = sample.get_message_definition_obj();
 
-  write_message_definition(ss, m);
+  ss << m;
 
   ASSERT_THAT(ss.str(), Eq(sample.message_definition()));
 }
@@ -680,7 +668,7 @@ TEST_F(Writer, Writes_The_Complete_Document_Back) {
 
   write_initial_line(ss);
   write_bag_header_record(ss, h_head);
-  write_header(ss, h_chunk);
+  ss << h_chunk;
   auto pos = reserve_size_value(ss);
   write_connection_record(ss, h_conn, ch);
   write_messages(ss, hs_message.begin(), hs_message.end(), ms.begin());
@@ -692,7 +680,6 @@ TEST_F(Writer, Writes_The_Complete_Document_Back) {
   ASSERT_THAT(ss.str(), Eq(sample.whole_file()));
 }
 
-// refactor
 // Index records: offsets are filled in
 // Opcodes are filled in
 
