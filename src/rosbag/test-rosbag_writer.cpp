@@ -7,6 +7,14 @@
 using namespace testing;
 
 struct Header {
+  enum struct Opcodes {
+    message_data = 2,
+    bag_header   = 3,
+    index_data   = 4,
+    chunk        = 5,
+    chunk_info   = 6,
+    connection   = 7,
+  };
   uint32_t chunk_count;
   uint32_t conn_count;
   uint32_t count;
@@ -21,9 +29,6 @@ struct Header {
   uint64_t chunk_pos;
   uint64_t end_time;
   uint8_t  op;
-  Header(): chunk_count(0), conn_count(0), count(0), ver(0), index_pos(0),
-            topic(""), time(0), conn(0xffff), size(0), compression(""),
-            start_time(0), chunk_pos(0), end_time(0), op(0) { };
 };
 
 // http://wiki.ros.org/ROS/Connection%20Header
@@ -229,48 +234,41 @@ void write_key_value(std::ostream& os, std::string const& key, T const& value) {
 
 void write_header(std::ostream& os, Header const& h) {
   auto core_func = [&](){
-    if (h.chunk_count) {
-      write_key_value(os, "chunk_count", h.chunk_count);
+    Header::Opcodes op = static_cast<Header::Opcodes>(h.op);
+    switch (op) {
+      default:
+        break;
+      case Header::Opcodes::bag_header:
+        write_key_value(os, "chunk_count", h.chunk_count);
+        write_key_value(os, "conn_count",  h.conn_count);
+        write_key_value(os, "index_pos",   h.index_pos);
+        break;
+      case Header::Opcodes::chunk:
+        write_key_value(os, "size",        h.size);
+        write_key_value(os, "compression", h.compression);
+        break;
+      case Header::Opcodes::connection:
+        write_key_value(os, "topic",       h.topic);
+        write_key_value(os, "conn",        h.conn);
+        break;
+      case Header::Opcodes::message_data:
+        write_key_value(os, "time",        h.time);
+        write_key_value(os, "conn",        h.conn);
+        break;
+      case Header::Opcodes::index_data:
+        write_key_value(os, "count", h.count);
+        write_key_value(os, "ver", h.ver);
+        write_key_value(os, "conn",        h.conn);
+        break;
+      case Header::Opcodes::chunk_info:
+        write_key_value(os, "count", h.count);
+        write_key_value(os, "ver", h.ver);
+        write_key_value(os, "start_time",  h.start_time);
+        write_key_value(os, "chunk_pos",   h.chunk_pos);
+        write_key_value(os, "end_time",    h.end_time);
+        break;
     }
-    if (h.conn_count) {
-      write_key_value(os, "conn_count",  h.conn_count);
-    }
-    if (h.count) {
-      write_key_value(os, "count", h.count);
-    }
-    if (h.ver) {
-      write_key_value(os, "ver", h.ver);
-    }
-    if (h.index_pos) {
-      write_key_value(os, "index_pos",   h.index_pos);
-    }
-    if (h.time) {
-      write_key_value(os, "time",        h.time);
-    }
-    if (h.topic.length()) {
-      write_key_value(os, "topic",       h.topic);
-    }
-    if (h.conn != 0xffff) {
-      write_key_value(os, "conn",        h.conn);
-    }
-    if (h.start_time) {
-      write_key_value(os, "start_time",  h.start_time);
-    }
-    if (h.chunk_pos) {
-      write_key_value(os, "chunk_pos",   h.chunk_pos);
-    }
-    if (h.end_time) {
-      write_key_value(os, "end_time",    h.end_time);
-    }
-    if (h.size) {
-      write_key_value(os, "size",        h.size);
-    }
-    if (h.compression.length()) {
-      write_key_value(os, "compression", h.compression);
-    }
-    if (h.op) {
-      write_key_value(os, "op",          h.op);
-    }
+    write_key_value(os, "op", h.op);
   };
   write_with_length_prefix(os, core_func);
 }
@@ -705,18 +703,22 @@ TEST_F(Writer, Writes_The_Complete_Document_Back) {
   auto pos = reserve_size_value(ss);
   write_connection_record(ss, h_conn, ch);
   write_messages(ss, hs_message.begin(), hs_message.end(), ms.begin());
-  fixate_size_value(ss, pos); // FIXME: why here ok? Why in XML, index etc also inside this connection record?
+  fixate_size_value(ss, pos);
   write_index_record(ss, h_index_data, index_entries.begin(), index_entries.end());
   write_connection_record(ss, h_conn, ch);
   write_chunk_info_record(ss, h_chunk_info, chunk_info_entries.begin(), chunk_info_entries.end());
 
-  std::ofstream f1("/home/olpa/tmp/f1"); // FIXME
-  f1 << ss.str();
   ASSERT_THAT(ss.str(), Eq(sample.whole_file()));
 }
 
+// refactor
 // Index records: offsets are filled in
 // Opcodes are filled in
+
+//wr.will_write_events_of_type(that);
+//wr.add_event();
+//wr.add_event();
+//wr.finalize(); (maybe)
 
 int main(int argc, char** argv) {
   InitGoogleTest(&argc, argv);
