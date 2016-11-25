@@ -262,11 +262,7 @@ void write_header(std::ostream& os, Header const& h) {
   write_with_length_prefix(os, core_func);
 }
 
-std::ostream& operator<<(std::ostream& os, Header const& h) {
-  write_header(os, h);
-  return os;
-}
-
+// FIXME refactor
 std::ostream& operator<<(std::ostream& os, ConnectionHeader const& ch) {
   if (ch.topic.length()) {
     write_key_value(os, "topic", ch.topic);
@@ -310,7 +306,7 @@ void write_bag_header_record(std::ostream& os, Header const& h) {
 }
 
 void write_connection_record(std::ostream& os, Header const& h, ConnectionHeader const& ch) {
-  os << h;
+  write_header(os, h);
   auto core_func = [&]() {
     os << ch;
   };
@@ -370,7 +366,7 @@ std::ostream& operator<<(std::ostream& os, ChunkInfoEntry const& cie) {
 
 template<class Iterator>
 void write_index_record(std::ostream& os, Header const& h, Iterator begin, Iterator end) {
-  os << h;
+  write_header(os, h);
   auto core_func = [&]() {
     for (auto i = begin; i != end; ++i) {
       os << *i;
@@ -381,7 +377,7 @@ void write_index_record(std::ostream& os, Header const& h, Iterator begin, Itera
 
 template<class Iterator>
 void write_chunk_info_record(std::ostream& os, Header const& h, Iterator begin, Iterator end) {
-  os << h;
+  write_header(os, h);
   auto core_func = [&]() {
     for (auto i = begin; i != end; ++i) {
       os << *i;
